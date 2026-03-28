@@ -2,7 +2,6 @@
   "appId": "com.notaservice.hp",
   "appName": "Nota Service HP",
   "webDir": "www",
-  "bundledWebRuntime": false,
   "server": {
     "androidScheme": "https",
     "cleartext": true
@@ -11,13 +10,7 @@
     "allowMixedContent": true,
     "captureInput": true,
     "webContentsDebuggingEnabled": false,
-    "backgroundColor": "#667eea",
-    "buildOptions": {
-      "keystorePath": null,
-      "keystoreAlias": null,
-      "keystorePassword": null,
-      "keystoreKeyPassword": null
-    }
+    "backgroundColor": "#667eea"
   },
   "plugins": {
     "Camera": {
@@ -26,10 +19,7 @@
         "allowEditing": false,
         "resultType": "DataUrl",
         "saveToGallery": true,
-        "correctOrientation": true,
-        "presentationStyle": "fullscreen",
-        "width": 1280,
-        "height": 1280
+        "correctOrientation": true
       }
     },
     "Contacts": {
@@ -47,48 +37,21 @@
           "cancel": "Batal",
           "availableDevices": "Printer tersedia",
           "noDeviceFound": "Tidak ada printer ditemukan"
-        },
-        "bluetoothPermissions": [
-          "android.permission.BLUETOOTH_SCAN",
-          "android.permission.BLUETOOTH_CONNECT",
-          "android.permission.ACCESS_FINE_LOCATION"
-        ]
+        }
       }
     },
     "Filesystem": {
       "android": {
         "permissions": [
           "android.permission.READ_EXTERNAL_STORAGE",
-          "android.permission.WRITE_EXTERNAL_STORAGE",
-          "android.permission.READ_MEDIA_IMAGES"
+          "android.permission.WRITE_EXTERNAL_STORAGE"
         ]
       }
     },
     "Share": {
       "enabled": true,
       "android": {
-        "filename": "nota-share",
-        "chooserTitle": "Bagikan Nota"
-      }
-    },
-    "App": {
-      "enabled": true
-    },
-    "AppLauncher": {
-      "enabled": true
-    },
-    "Preferences": {
-      "enabled": true
-    },
-    "StatusBar": {
-      "enabled": true
-    },
-    "SplashScreen": {
-      "enabled": true,
-      "android": {
-        "backgroundColor": "#667eea",
-        "splashFullScreen": true,
-        "splashImmersive": true
+        "filename": "nota-share"
       }
     }
   }
