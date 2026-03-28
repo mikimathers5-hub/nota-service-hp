@@ -30,7 +30,31 @@ jobs:
           fetch-depth: 1
 
       # ==========================================
-      # 2. SETUP NODE.JS
+      # 2. CACHE NODE MODULES
+      # ==========================================
+      - name: Cache Node Modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # ==========================================
+      # 3. CACHE GRADLE (Mempercepat Build Android)
+      # ==========================================
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # ==========================================
+      # 4. SETUP NODE.JS
       # ==========================================
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -38,7 +62,7 @@ jobs:
           node-version: '20'
 
       # ==========================================
-      # 3. INSTALL DEPENDENCIES
+      # 5. INSTALL DEPENDENCIES
       # ==========================================
       - name: Clean npm cache
         run: npm cache clean --force
@@ -47,7 +71,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       # ==========================================
-      # 4. SETUP JAVA (JDK 17)
+      # 6. SETUP JAVA (JDK 17)
       # ==========================================
       - name: Setup JDK 17
         uses: actions/setup-java@v4
@@ -56,7 +80,7 @@ jobs:
           distribution: 'temurin'
 
       # ==========================================
-      # 5. SETUP ANDROID SDK
+      # 7. SETUP ANDROID SDK
       # ==========================================
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -69,7 +93,7 @@ jobs:
           sdkmanager "cmdline-tools;latest"
 
       # ==========================================
-      # 6. PREPARE WEB ASSETS (www)
+      # 8. PREPARE WEB ASSETS (www)
       # ==========================================
       - name: Prepare www directory
         run: |
@@ -87,25 +111,22 @@ jobs:
             exit 1
           fi
           
-          # Copy manifest.json (atau buat default)
+          # Copy manifest.json
           if [ -f "manifest.json" ]; then
             cp manifest.json www/
           else
             echo '{"name":"Nota Service HP","short_name":"NotaService","start_url":".","display":"standalone","background_color":"#667eea","theme_color":"#667eea"}' > www/manifest.json
           fi
           
-          # Copy service-worker.js (opsional)
+          # Copy service-worker.js
           cp service-worker.js www/ 2>/dev/null || echo '// Service Worker Placeholder' > www/service-worker.js
           
-          # Create placeholder icons
           touch www/icon.png
           touch www/icon-512.png
-          
-          echo "=== www directory contents ==="
           ls -la www/
 
       # ==========================================
-      # 7. ADD ANDROID PLATFORM
+      # 9. ADD ANDROID PLATFORM
       # ==========================================
       - name: Clean old Android folder
         run: rm -rf android
@@ -114,7 +135,7 @@ jobs:
         run: npx cap add android
 
       # ==========================================
-      # 8. UPDATE ANDROID MANIFEST (FULL PERMISSIONS)
+      # 10. UPDATE ANDROID MANIFEST (FULL PERMISSIONS)
       # ==========================================
       - name: Update AndroidManifest.xml with permissions
         run: |
@@ -122,30 +143,21 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-              <!-- CONTACTS PERMISSIONS -->
               <uses-permission android:name="android.permission.READ_CONTACTS" />
               <uses-permission android:name="android.permission.WRITE_CONTACTS" />
               <uses-permission android:name="android.permission.GET_ACCOUNTS" />
-              
-              <!-- CAMERA PERMISSIONS -->
               <uses-permission android:name="android.permission.CAMERA" />
               <uses-feature android:name="android.hardware.camera" android:required="false" />
               <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
-              
-              <!-- BLUETOOTH PERMISSIONS -->
               <uses-permission android:name="android.permission.BLUETOOTH" />
               <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
               <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
               <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
               <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
               <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-              
-              <!-- STORAGE PERMISSIONS -->
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
               <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
               <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-              
-              <!-- NETWORK PERMISSIONS -->
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
@@ -182,29 +194,20 @@ jobs:
                           android:resource="@xml/file_paths" />
                   </provider>
               </application>
-
           </manifest>
           MANIFEST_EOF
-          
-          echo "✓ AndroidManifest.xml updated with full permissions"
+          echo "✓ AndroidManifest.xml updated"
 
       # ==========================================
-      # 9. COPY CAPACITOR CONFIG
-      # ==========================================
-      - name: Copy Capacitor Config
-        run: |
-          cp capacitor.config.json android/ 2>/dev/null || true
-          echo "=== android directory ==="
-          ls -la android/
-
-      # ==========================================
-      # 10. SYNC CAPACITOR
+      # 11. COPY CAPACITOR CONFIG & SYNC
       # ==========================================
       - name: Sync Capacitor
-        run: npx cap sync android
+        run: |
+          cp capacitor.config.json android/ 2>/dev/null || true
+          npx cap sync android
 
       # ==========================================
-      # 11. BUILD APK
+      # 12. BUILD APK
       # ==========================================
       - name: Build Debug APK
         if: github.event.inputs.build_type != 'release'
@@ -221,39 +224,19 @@ jobs:
           ./gradlew assembleRelease --stacktrace --info
 
       # ==========================================
-      # 12. VERIFY BUILD OUTPUT
+      # 13. VERIFY & UPLOAD ARTIFACT
       # ==========================================
       - name: Verify APK exists
         run: |
           BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
-          APK_PATH="android/app/build/outputs/apk/${BUILD_TYPE}"
-          
-          echo "Looking for APK in: ${APK_PATH}"
-          ls -la ${APK_PATH}/ || echo "Directory not found"
-          
-          # Find any APK file
           find android/app/build/outputs -name "*.apk" -type f
 
-      # ==========================================
-      # 13. UPLOAD APK ARTIFACT
-      # ==========================================
-      - name: Upload Debug APK
-        if: github.event.inputs.build_type != 'release'
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: NotaService-Debug-v${{ github.run_number }}
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: NotaService-${{ github.event.inputs.build_type || 'Debug' }}-v${{ github.run_number }}
+          path: android/app/build/outputs/apk/**/*.apk
           retention-days: 30
-          if-no-files-found: warn
-
-      - name: Upload Release APK
-        if: github.event.inputs.build_type == 'release'
-        uses: actions/upload-artifact@v4
-        with:
-          name: NotaService-Release-v${{ github.run_number }}
-          path: android/app/build/outputs/apk/release/*.apk
-          retention-days: 30
-          if-no-files-found: warn
 
       # ==========================================
       # 14. CREATE GITHUB RELEASE (ON TAG)
@@ -264,8 +247,6 @@ jobs:
         with:
           files: android/app/build/outputs/apk/**/*.apk
           generate_release_notes: true
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -274,10 +255,4 @@ jobs:
       # ==========================================
       - name: Build Summary
         run: |
-          echo "=========================================="
-          echo "  BUILD COMPLETED SUCCESSFULLY! 🎉"
-          echo "=========================================="
-          echo "  Build Type: ${{ github.event.inputs.build_type || 'debug' }}"
-          echo "  Run Number: ${{ github.run_number }}"
-          echo "  Commit: ${{ github.sha }}"
-          echo "=========================================="
+          echo "Build Completed: ${{ github.event.inputs.build_type || 'debug' }}"
