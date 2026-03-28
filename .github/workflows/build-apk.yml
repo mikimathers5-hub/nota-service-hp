@@ -32,9 +32,9 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      # Install dependencies
+      # Install dependencies - GANTI npm ci dengan npm install
       - name: Install dependencies
-        run: npm ci
+        run: npm install  # <-- GANTI INI
 
       # Setup JDK 17
       - name: Setup JDK 17
@@ -53,28 +53,16 @@ jobs:
           sdkmanager "platforms;android-34"
           sdkmanager "build-tools;34.0.0"
           sdkmanager "platform-tools"
-          sdkmanager "cmdline-tools;latest"
 
       # Prepare web assets
       - name: Prepare www directory
         run: |
           mkdir -p www
-          cp www/index.html www/ 2>/dev/null || cp index.html www/ 2>/dev/null || echo "Using existing www"
-          cp www/manifest.json www/ 2>/dev/null || cp manifest.json www/ 2>/dev/null || true
-          cp www/service-worker.js www/ 2>/dev/null || cp service-worker.js www/ 2>/dev/null || true
-          # Create placeholder icons
-          touch www/icon.png
-          touch www/icon-512.png
-          ls -la www/
+          ls -la
 
       # Sync Capacitor
       - name: Capacitor Sync
         run: npx cap sync android
-
-      # Copy capacitor.config.json to android
-      - name: Copy config
-        run: |
-          cp capacitor.config.json android/ 2>/dev/null || true
 
       # Build Debug APK
       - name: Build Debug APK
@@ -84,7 +72,7 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
 
-      # Build Release APK (unsigned)
+      # Build Release APK
       - name: Build Release APK
         if: github.event.inputs.build_type == 'release'
         run: |
@@ -109,13 +97,3 @@ jobs:
           name: NotaService-Release
           path: android/app/build/outputs/apk/release/app-release-unsigned.apk
           retention-days: 30
-
-      # Create Release (on tag)
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            android/app/build/outputs/apk/debug/app-debug.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
