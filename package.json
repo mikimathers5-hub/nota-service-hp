@@ -10,21 +10,21 @@
     "clean": "rm -rf www android ios node_modules package-lock.json"
   },
   "dependencies": {
-    "@capacitor/android": "^6.1.2",
-    "@capacitor/app": "^6.1.0",
-    "@capacitor/app-launcher": "^6.1.0",
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/app": "^6.0.2",
+    "@capacitor/app-launcher": "^6.0.3",
     "@capacitor/camera": "^6.1.2",
     "@capacitor-community/bluetooth-le": "^6.1.0",
-    "@capacitor-community/contacts": "^6.1.0",
-    "@capacitor/core": "^6.1.2",
-    "@capacitor/filesystem": "^6.1.0",
-    "@capacitor/preferences": "^6.1.0",
-    "@capacitor/share": "^6.1.0",
-    "@capacitor/splash-screen": "^6.1.0",
-    "@capacitor/status-bar": "^6.1.0"
+    "@capacitor-community/contacts": "^6.0.0",
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/filesystem": "^6.0.2",
+    "@capacitor/preferences": "^6.0.3",
+    "@capacitor/share": "^6.0.3",
+    "@capacitor/splash-screen": "^6.0.3",
+    "@capacitor/status-bar": "^6.0.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.1.2"
+    "@capacitor/cli": "^6.2.0"
   },
   "keywords": ["capacitor", "android", "service-hp", "nota"],
   "license": "MIT"
