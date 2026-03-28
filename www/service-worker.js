@@ -1,8 +1,8 @@
-const CACHE_NAME = 'nota-service-v2';
+const CACHE_NAME = 'nota-service-v3';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json'
+  './',
+  './index.html',
+  './manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
@@ -37,7 +37,7 @@ self.addEventListener('fetch', (event) => {
       }
       return fetch(event.request).catch(() => {
         if (event.request.destination === 'document') {
-          return caches.match('/index.html');
+          return caches.match('./index.html');
         }
       });
     })
