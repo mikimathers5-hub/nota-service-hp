@@ -1,0 +1,3497 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#667eea" id="themeColorMeta">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="Aplikasi Nota Service HP Profesional">
+    <link rel="manifest" href="manifest.json">
+    <title>Nota Service HP</title>
+    
+    <!-- External Libraries -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/esc-pos-encoder@1.2.0/dist/esc-pos-encoder.min.js"></script>
+    
+    <style>
+        /* ===== CSS VARIABLES & RESET ===== */
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+        }
+        
+        :root { 
+            --primary: #667eea; 
+            --secondary: #764ba2; 
+            --success: #4caf50; 
+            --warning: #ff9800; 
+            --danger: #f44336; 
+            --info: #00bcd4; 
+            --bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            --card-bg: white; 
+            --text: #333; 
+            --border: #e4e4e4;
+            --shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        body.dark-mode { 
+            --bg: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+            --card-bg: #16213e; 
+            --text: #eaeaea; 
+            --border: #2a2a4a;
+        }
+        
+        /* ===== BASE STYLES ===== */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background: var(--bg); 
+            min-height: 100vh; 
+            padding: 15px; 
+            padding-bottom: 30px; 
+            color: var(--text); 
+            transition: all 0.3s ease;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .container { 
+            max-width: 500px; 
+            margin: 0 auto; 
+        }
+        
+        /* ===== HEADER ===== */
+        .header { 
+            text-align: center; 
+            padding: 20px 0; 
+            color: white; 
+        }
+        
+        .header-icon { 
+            width: 70px; 
+            height: 70px; 
+            background: white; 
+            border-radius: 20px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            margin: 0 auto 10px; 
+            font-size: 35px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+            overflow: hidden; 
+        }
+        
+        .header-icon img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain; 
+        }
+        
+        .header h1 { 
+            font-size: 22px; 
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+        
+        .header .slogan { 
+            font-size: 12px; 
+            opacity: 0.9; 
+            margin-top: 4px;
+            font-style: italic;
+        }
+        
+        .header-controls { 
+            display: flex; 
+            justify-content: center; 
+            gap: 10px; 
+            margin-top: 15px; 
+            flex-wrap: wrap; 
+        }
+        
+        .btn-icon { 
+            background: rgba(255,255,255,0.2); 
+            border: none; 
+            color: white; 
+            padding: 10px 16px; 
+            border-radius: 25px; 
+            cursor: pointer; 
+            font-size: 13px; 
+            backdrop-filter: blur(10px); 
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .btn-icon:active {
+            transform: scale(0.95);
+            background: rgba(255,255,255,0.3);
+        }
+        
+        /* ===== STATUS BAR ===== */
+        .connection-status { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            background: #f44336; 
+            color: white; 
+            text-align: center; 
+            padding: 8px; 
+            font-size: 12px; 
+            transform: translateY(-100%); 
+            transition: transform 0.3s; 
+            z-index: 9999;
+            font-weight: 600;
+        }
+        
+        .connection-status.offline { 
+            transform: translateY(0); 
+        }
+        
+        /* ===== WORKFLOW INFO ===== */
+        .workflow-info { 
+            background: rgba(255,255,255,0.15); 
+            backdrop-filter: blur(10px); 
+            border-radius: 15px; 
+            padding: 15px; 
+            margin-bottom: 20px; 
+            color: white; 
+            border: 1px solid rgba(255,255,255,0.2); 
+        }
+        
+        .workflow-steps { 
+            display: flex; 
+            justify-content: space-between; 
+            font-size: 11px; 
+            margin-top: 12px; 
+        }
+        
+        .step { 
+            text-align: center; 
+            flex: 1; 
+            opacity: 0.6; 
+            transition: all 0.3s;
+            padding: 5px;
+        }
+        
+        .step.active { 
+            opacity: 1; 
+            font-weight: 700; 
+            transform: scale(1.1);
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
+        
+        /* ===== TYPE SELECTOR ===== */
+        .nota-type-selector { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 10px; 
+            margin-bottom: 20px; 
+        }
+        
+        .type-btn { 
+            padding: 15px 5px; 
+            border: 3px solid rgba(255,255,255,0.3); 
+            border-radius: 12px; 
+            background: rgba(255,255,255,0.1); 
+            color: white; 
+            cursor: pointer; 
+            text-align: center; 
+            backdrop-filter: blur(10px); 
+            transition: all 0.3s;
+            user-select: none;
+        }
+        
+        .type-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .type-btn.active { 
+            background: white; 
+            color: var(--primary); 
+            border-color: white; 
+            transform: scale(1.02); 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            font-weight: 700;
+        }
+        
+        .type-btn .icon { 
+            font-size: 24px; 
+            margin-bottom: 5px; 
+            display: block; 
+        }
+        
+        .type-btn .label { 
+            font-size: 11px; 
+            font-weight: 700; 
+            display: block;
+            line-height: 1.3;
+        }
+        
+        /* ===== CARDS ===== */
+        .form-card, .preview-card, .history-card, .settings-card { 
+            background: var(--card-bg); 
+            border-radius: 20px; 
+            padding: 25px; 
+            box-shadow: var(--shadow); 
+            margin-bottom: 20px; 
+            display: none;
+        }
+        
+        .form-card.active, .preview-card.active, .history-card.active, .settings-card.active { 
+            display: block; 
+            animation: slideUp 0.3s ease; 
+        }
+        
+        @keyframes slideUp { 
+            from { opacity: 0; transform: translateY(20px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        
+        .form-title { 
+            font-size: 18px; 
+            color: var(--text); 
+            margin-bottom: 20px; 
+            padding-bottom: 15px; 
+            border-bottom: 2px solid var(--border); 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            font-weight: 700;
+        }
+        
+        /* ===== FORM ELEMENTS ===== */
+        .form-group { 
+            margin-bottom: 18px; 
+        }
+        
+        label { 
+            display: block; 
+            margin-bottom: 6px; 
+            color: var(--text); 
+            font-weight: 600; 
+            font-size: 13px; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        input, textarea, select { 
+            width: 100%; 
+            padding: 14px 16px; 
+            border: 2px solid var(--border); 
+            border-radius: 12px; 
+            font-size: 15px; 
+            background: var(--card-bg); 
+            color: var(--text); 
+            font-family: inherit; 
+            transition: all 0.3s;
+            -webkit-appearance: none;
+        }
+        
+        input:focus, textarea:focus, select:focus { 
+            outline: none; 
+            border-color: var(--primary); 
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); 
+        }
+        
+        .row { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 12px; 
+        }
+        
+        .row-3 { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr 1fr; 
+            gap: 8px; 
+        }
+        
+        .input-with-button { 
+            display: flex; 
+            gap: 8px; 
+        }
+        
+        .btn-import { 
+            padding: 0 16px; 
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); 
+            color: white; 
+            border: none; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            font-size: 20px;
+            min-width: 50px;
+            transition: all 0.3s;
+        }
+        
+        .btn-import:active {
+            transform: scale(0.95);
+        }
+        
+        .checkbox-group { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px; 
+            background: rgba(128,128,128,0.1); 
+            border-radius: 10px; 
+            border: 2px solid var(--border); 
+            cursor: pointer; 
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+        
+        .checkbox-group:active {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: var(--primary);
+        }
+        
+        .checkbox-group input[type="checkbox"] { 
+            width: 20px; 
+            height: 20px; 
+            accent-color: var(--primary);
+            min-width: 20px;
+        }
+        
+        .status-option { 
+            padding: 12px; 
+            border: 2px solid var(--border); 
+            border-radius: 10px; 
+            text-align: center; 
+            cursor: pointer; 
+            background: var(--card-bg); 
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .status-option.active { 
+            border-color: var(--primary); 
+            background: rgba(102, 126, 234, 0.1); 
+            color: var(--primary); 
+            font-weight: 700; 
+        }
+        
+        /* ===== BUTTONS ===== */
+        .btn-primary { 
+            width: 100%; 
+            padding: 16px; 
+            border: none; 
+            border-radius: 12px; 
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); 
+            color: white; 
+            font-size: 16px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            margin-top: 10px; 
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary { 
+            width: 100%; 
+            padding: 14px; 
+            border: 2px solid var(--border); 
+            border-radius: 12px; 
+            background: var(--card-bg); 
+            color: #666; 
+            font-size: 14px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+        
+        .btn-secondary:active {
+            background: rgba(128,128,128,0.1);
+        }
+        
+        .btn-save-contact { 
+            background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%); 
+            color: white; 
+            margin-top: 8px; 
+            font-size: 13px; 
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        
+        .btn-save-contact:active {
+            transform: scale(0.98);
+        }
+        
+        /* ===== NOTA PAPER ===== */
+        .nota-paper { 
+            background: white; 
+            border-radius: 15px; 
+            padding: 25px; 
+            margin-bottom: 20px; 
+            position: relative; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            color: #333; 
+            transition: padding 0.2s; 
+            overflow: hidden; 
+            width: 100%; 
+            font-size: 12px; 
+        }
+        
+        .nota-paper::before { 
+            content: ""; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 2px, transparent 2px, transparent 8px); 
+            pointer-events: none; 
+            z-index: 0; 
+        }
+        
+        .nota-paper::after { 
+            content: "SERVICE HP"; 
+            position: absolute; 
+            bottom: 20px; 
+            right: 20px; 
+            font-size: 40px; 
+            font-weight: bold; 
+            color: rgba(0,0,0,0.05); 
+            transform: rotate(-15deg); 
+            pointer-events: none; 
+            z-index: 0; 
+            white-space: pre; 
+        }
+        
+        .nota-paper.terima { border: 3px solid var(--warning); background: linear-gradient(to bottom, #fff8e1 0%, #ffffff 100%); }
+        .nota-paper.diagnosa { border: 3px solid #2196f3; background: linear-gradient(to bottom, #e3f2fd 0%, #ffffff 100%); }
+        .nota-paper.selesai { border: 3px solid var(--info); background: linear-gradient(to bottom, #e0f7fa 0%, #ffffff 100%); }
+        .nota-paper.ambil { border: 3px solid var(--success); background: linear-gradient(to bottom, #e8f5e9 0%, #ffffff 100%); }
+        .nota-paper.batal { border: 3px solid var(--danger); background: linear-gradient(to bottom, #ffebee 0%, #ffffff 100%); }
+        
+        .nota-header { 
+            text-align: center; 
+            border-bottom: 2px solid #dee2e6; 
+            padding-bottom: 15px; 
+            margin-bottom: 20px; 
+            position: relative; 
+            z-index: 1; 
+        }
+        
+        .nota-logo { 
+            width: 60px; 
+            height: 60px; 
+            object-fit: contain; 
+            margin-bottom: 10px; 
+            border-radius: 10px; 
+        }
+        
+        .nota-type-badge { 
+            display: inline-block; 
+            padding: 8px 20px; 
+            border-radius: 25px; 
+            font-size: 13px; 
+            font-weight: 800; 
+            color: white; 
+            margin-bottom: 10px; 
+        }
+        
+        .badge-terima { background: var(--warning); }
+        .badge-diagnosa { background: #2196f3; }
+        .badge-selesai { background: var(--info); }
+        .badge-ambil { background: var(--success); }
+        .badge-batal { background: var(--danger); }
+        
+        .nota-header h2 { color: #333; font-size: 20px; margin-bottom: 5px; }
+        .nota-slogan { font-size: 11px; color: #666; margin-top: 2px; font-style: italic; }
+        .nota-alamat, .nota-telp { font-size: 12px; color: #666; margin-bottom: 3px; }
+        
+        .nota-id { 
+            background: #f8f9fa; 
+            padding: 8px 15px; 
+            border-radius: 8px; 
+            font-family: 'Courier New', monospace; 
+            font-size: 14px; 
+            margin-top: 10px; 
+            display: inline-block; 
+            border: 1px dashed #adb5bd; 
+            letter-spacing: 0.5px; 
+        }
+        
+        .nota-section { 
+            margin-bottom: 20px; 
+            padding-bottom: 15px; 
+            border-bottom: 1px dashed #dee2e6; 
+            position: relative; 
+            z-index: 1; 
+        }
+        
+        .nota-section-title { 
+            font-size: 12px; 
+            color: #868e96; 
+            text-transform: uppercase; 
+            margin-bottom: 10px; 
+            font-weight: 700; 
+        }
+        
+        .nota-row { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-bottom: 10px; 
+            font-size: 14px; 
+        }
+        
+        .nota-label { color: #666; font-weight: 500; }
+        .nota-value { 
+            color: #333; 
+            font-weight: 600; 
+            text-align: right; 
+            max-width: 60%; 
+            word-break: break-word; 
+        }
+        
+        .nota-total { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 10px; 
+            border: 2px solid #dee2e6; 
+        }
+        
+        .nota-footer { 
+            margin-top: 25px; 
+            padding-top: 15px; 
+            border-top: 1px dashed #dee2e6; 
+            text-align: center; 
+            font-size: 11px; 
+            color: #333; 
+        }
+        
+        .syarat-section { 
+            margin-top: 20px; 
+            padding: 10px; 
+            background: #f9f9f9; 
+            border-radius: 8px; 
+            font-size: 10px; 
+            color: #666; 
+            text-align: left; 
+            border-left: 3px solid var(--primary); 
+        }
+        
+        .syarat-section strong { 
+            font-size: 11px; 
+            display: block; 
+            margin-bottom: 5px; 
+            color: var(--primary); 
+        }
+        
+        /* ===== ACTION GRID ===== */
+        .action-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 8px; 
+            margin-bottom: 15px; 
+        }
+        
+        .btn-action { 
+            padding: 12px 8px; 
+            border: none; 
+            border-radius: 12px; 
+            font-size: 11px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 4px; 
+            color: white; 
+            transition: all 0.3s; 
+            text-align: center;
+            min-height: 70px;
+        }
+        
+        .btn-action:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-wa-text { background: linear-gradient(135deg, #25d366 0%, #128c7e 100%); }
+        .btn-wa-img { background: linear-gradient(135deg, #128c7e 0%, #075e54 100%); }
+        .btn-bluetooth { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); }
+        .btn-pdf { background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); }
+        .btn-preview-thermal { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); }
+        
+        /* ===== COMPONENTS ===== */
+        .kondisi-checkbox-group { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 8px; 
+            margin-top: 5px; 
+        }
+        
+        .kondisi-checkbox { 
+            background: rgba(128,128,128,0.1); 
+            padding: 8px 14px; 
+            border-radius: 20px; 
+            border: 1px solid var(--border); 
+            cursor: pointer; 
+            transition: all 0.2s;
+            font-size: 13px;
+            user-select: none;
+        }
+        
+        .kondisi-checkbox.active { 
+            background: var(--primary); 
+            color: white; 
+            border-color: var(--primary); 
+        }
+        
+        .foto-preview { 
+            max-width: 100%; 
+            max-height: 150px; 
+            margin-top: 10px; 
+            border-radius: 10px; 
+            display: none;
+            border: 2px solid var(--primary);
+            overflow: hidden;
+        }
+        
+        .foto-preview img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .timeline { 
+            margin-top: 15px; 
+            padding: 12px; 
+            background: #f8f9fa; 
+            border-radius: 12px; 
+            border-left: 4px solid var(--primary); 
+        }
+        
+        .timeline-title { 
+            font-size: 12px; 
+            font-weight: bold; 
+            color: var(--primary); 
+            margin-bottom: 8px; 
+        }
+        
+        .timeline-item { 
+            font-size: 11px; 
+            color: #666; 
+            margin-bottom: 6px; 
+            display: flex; 
+            align-items: baseline; 
+            gap: 8px; 
+        }
+        
+        .timeline-badge { 
+            display: inline-block; 
+            width: 8px; 
+            height: 8px; 
+            border-radius: 50%; 
+            background: var(--primary); 
+            flex-shrink: 0;
+        }
+        
+        .timeline-time { 
+            font-family: monospace; 
+            font-size: 10px; 
+            color: #999; 
+            flex-shrink: 0;
+        }
+        
+        .workflow-buttons { 
+            display: flex; 
+            gap: 10px; 
+            margin-top: 15px; 
+            flex-wrap: wrap; 
+        }
+        
+        .btn-workflow { 
+            flex: 1; 
+            padding: 14px; 
+            border: none; 
+            border-radius: 12px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            background: #f0f0f0; 
+            color: #333;
+            transition: all 0.3s;
+            min-width: 120px;
+        }
+        
+        .btn-workflow:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-workflow.diagnosa { background: #2196f3; color: white; }
+        .btn-workflow.selesai { background: #00bcd4; color: white; }
+        .btn-workflow.ambil { background: #4caf50; color: white; }
+        
+        .logo-preview { 
+            width: 100px; 
+            height: 100px; 
+            border: 2px dashed #ccc; 
+            border-radius: 12px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            margin-bottom: 10px; 
+            overflow: hidden; 
+            background: var(--card-bg); 
+        }
+        
+        .logo-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .color-preview { 
+            width: 30px; 
+            height: 30px; 
+            border-radius: 50%; 
+            display: inline-block; 
+            vertical-align: middle; 
+            margin-left: 10px; 
+            border: 2px solid #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* ===== LOADING & TOAST ===== */
+        .loading-overlay { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: rgba(0,0,0,0.6); 
+            display: none; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 3000; 
+            backdrop-filter: blur(5px); 
+        }
+        
+        .loading-overlay.show { 
+            display: flex; 
+        }
+        
+        .loading-spinner { 
+            width: 50px; 
+            height: 50px; 
+            border: 4px solid rgba(255,255,255,0.3); 
+            border-top-color: white; 
+            border-radius: 50%; 
+            animation: spin 0.8s linear infinite; 
+        }
+        
+        @keyframes spin { 
+            to { transform: rotate(360deg); } 
+        }
+        
+        .toast { 
+            position: fixed; 
+            bottom: 80px; 
+            left: 50%; 
+            transform: translateX(-50%) translateY(100px); 
+            background: #333; 
+            color: white; 
+            padding: 14px 24px; 
+            border-radius: 30px; 
+            font-size: 14px; 
+            opacity: 0; 
+            transition: all 0.3s; 
+            z-index: 1000;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            max-width: 90%;
+            text-align: center;
+        }
+        
+        .toast.show { 
+            transform: translateX(-50%) translateY(0); 
+            opacity: 1; 
+        }
+        
+        .db-status { 
+            position: fixed; 
+            bottom: 15px; 
+            right: 15px; 
+            width: 12px; 
+            height: 12px; 
+            border-radius: 50%; 
+            background: var(--success); 
+            z-index: 9999;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* ===== MODALS ===== */
+        .thermal-preview-modal { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.8); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 4000; 
+            visibility: hidden; 
+            opacity: 0; 
+            transition: all 0.3s; 
+            padding: 20px;
+        }
+        
+        .thermal-preview-modal.active { 
+            visibility: visible; 
+            opacity: 1; 
+        }
+        
+        .thermal-preview-content { 
+            background: white; 
+            width: 100%;
+            max-width: 380px; 
+            max-height: 85%; 
+            border-radius: 20px; 
+            padding: 20px; 
+            overflow: auto; 
+            font-family: 'Courier New', monospace; 
+            font-size: 12px; 
+            white-space: pre-wrap; 
+            word-break: break-word; 
+            color: black; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        
+        .thermal-preview-content pre { 
+            margin: 0; 
+            font-family: inherit; 
+            font-size: inherit; 
+            white-space: pre-wrap; 
+        }
+        
+        .close-modal { 
+            text-align: right; 
+            margin-bottom: 15px; 
+        }
+        
+        .close-modal button { 
+            background: #f44336; 
+            color: white; 
+            border: none; 
+            border-radius: 20px; 
+            padding: 8px 16px; 
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        /* Contact Picker Modal */
+        .contact-picker-overlay { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.85); 
+            z-index: 5000; 
+            display: none; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 15px; 
+        }
+        
+        .contact-picker-overlay.active { 
+            display: flex; 
+        }
+        
+        .contact-picker-content { 
+            background: white; 
+            width: 100%;
+            max-width: 420px; 
+            max-height: 85vh; 
+            border-radius: 20px; 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        
+        .contact-picker-header { 
+            padding: 20px; 
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); 
+            color: white; 
+        }
+        
+        .contact-picker-header h3 { 
+            margin: 0; 
+            font-size: 18px; 
+        }
+        
+        .contact-picker-header p { 
+            margin: 8px 0 0 0; 
+            font-size: 13px; 
+            opacity: 0.9; 
+        }
+        
+        .contact-picker-search { 
+            padding: 15px; 
+            border-bottom: 1px solid #eee; 
+        }
+        
+        .contact-picker-search input { 
+            width: 100%; 
+            padding: 12px 16px; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 25px; 
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+        
+        .contact-picker-search input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+        
+        .contact-list { 
+            overflow-y: auto; 
+            max-height: 55vh;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .contact-item { 
+            padding: 15px 20px; 
+            border-bottom: 1px solid #f0f0f0; 
+            cursor: pointer; 
+            transition: background 0.2s; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+        }
+        
+        .contact-item:hover, .contact-item:active { 
+            background: #f5f5f5; 
+        }
+        
+        .contact-item-avatar { 
+            width: 45px; 
+            height: 45px; 
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: white; 
+            font-weight: bold; 
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        
+        .contact-item-info { 
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .contact-item-name { 
+            font-weight: 600; 
+            color: #333; 
+            margin-bottom: 3px;
+            font-size: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .contact-item-phone { 
+            font-size: 13px; 
+            color: #666; 
+        }
+        
+        .contact-picker-close { 
+            padding: 15px; 
+            text-align: center; 
+            border-top: 1px solid #eee; 
+        }
+        
+        .contact-picker-close button { 
+            background: #f0f0f0; 
+            border: none; 
+            padding: 12px 30px; 
+            border-radius: 25px; 
+            cursor: pointer; 
+            font-weight: 600;
+            color: #333;
+            transition: all 0.3s;
+        }
+        
+        .contact-picker-close button:active {
+            background: #e0e0e0;
+        }
+        
+        /* ===== HISTORY & STATS ===== */
+        .history-item { 
+            padding: 15px; 
+            border: 2px solid var(--border); 
+            border-radius: 12px; 
+            margin-bottom: 10px; 
+            cursor: pointer; 
+            background: var(--card-bg); 
+            transition: all 0.3s; 
+        }
+        
+        .history-item:hover, .history-item:active { 
+            transform: translateX(5px); 
+            border-color: var(--primary); 
+        }
+        
+        .history-header { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-bottom: 8px; 
+            align-items: center;
+        }
+        
+        .history-name { 
+            font-weight: 700; 
+            font-size: 15px; 
+            color: var(--text);
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .history-type { 
+            padding: 4px 12px; 
+            border-radius: 15px; 
+            font-size: 10px; 
+            font-weight: 700; 
+            text-transform: uppercase;
+            flex-shrink: 0;
+            margin-left: 8px;
+        }
+        
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 10px; 
+            margin-bottom: 20px; 
+        }
+        
+        .stat-card { 
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); 
+            color: white; 
+            padding: 15px; 
+            border-radius: 12px; 
+            text-align: center; 
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        /* ===== UTILITIES ===== */
+        .error-input { 
+            border-color: #f44336 !important; 
+            background-color: rgba(244,67,54,0.05) !important; 
+        }
+        
+        .validation-msg { 
+            color: #f44336; 
+            font-size: 12px; 
+            margin-top: 6px; 
+            display: none;
+            font-weight: 500;
+        }
+        
+        .validation-msg.show { 
+            display: block; 
+        }
+        
+        .warranty-text { 
+            font-size: 11px; 
+            color: #2c7da0; 
+            font-weight: bold; 
+            margin-top: 10px; 
+            text-align: center;
+            padding: 8px;
+            background: #e0f7fa;
+            border-radius: 8px;
+        }
+        
+        /* ===== PRINT MEDIA ===== */
+        @media print { 
+            .header, .workflow-info, .nota-type-selector, .form-card, 
+            .btn-primary, .btn-secondary, .action-grid, .workflow-buttons { 
+                display: none !important; 
+            } 
+            .preview-card { 
+                display: block !important; 
+                box-shadow: none;
+            } 
+            .nota-paper { 
+                margin: 0; 
+                padding: 10px; 
+                width: 80mm; 
+                font-size: 12px;
+                box-shadow: none;
+            } 
+        }
+        
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 400px) {
+            .header h1 { font-size: 18px; }
+            .type-btn .label { font-size: 10px; }
+            .btn-action { font-size: 10px; padding: 10px 6px; }
+            .row { grid-template-columns: 1fr; }
+            .row-3 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Connection Status -->
+    <div class="connection-status" id="connectionStatus">⚠️ Mode Offline - Data tersimpan lokal</div>
+    
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+    
+    <!-- DB Status Indicator -->
+    <div class="db-status" id="dbStatus" title="Database Connected"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-icon" id="headerIcon">📱</div>
+            <h1 id="tokoNameDisplay">Nota Service HP</h1>
+            <div class="slogan" id="tokoSloganDisplay"></div>
+            <p style="font-size: 13px; opacity: 0.8; margin-top: 8px;">Sistem Manajemen Service Profesional</p>
+            <div class="header-controls">
+                <button class="btn-icon" onclick="app.showHistory()">📋 Riwayat</button>
+                <button class="btn-icon" onclick="app.showSettings()">⚙️ Pengaturan</button>
+                <button class="btn-icon" onclick="app.toggleDarkMode()">🌙 Mode</button>
+            </div>
+        </div>
+
+        <!-- Workflow Info -->
+        <div class="workflow-info">
+            <div style="font-size:13px; margin-bottom:8px; font-weight: 600;">📊 Alur Service (4 Tahap):</div>
+            <div class="workflow-steps">
+                <div class="step active" data-step="terima">
+                    <div style="font-size: 20px; margin-bottom: 4px;">📥</div>
+                    <div>Terima</div>
+                </div>
+                <div class="step" data-step="diagnosa">
+                    <div style="font-size: 20px; margin-bottom: 4px;">🔍</div>
+                    <div>Diagnosa</div>
+                </div>
+                <div class="step" data-step="selesai">
+                    <div style="font-size: 20px; margin-bottom: 4px;">✅</div>
+                    <div>Selesai</div>
+                </div>
+                <div class="step" data-step="ambil">
+                    <div style="font-size: 20px; margin-bottom: 4px;">📤</div>
+                    <div>Ambil</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Type Selector -->
+        <div class="nota-type-selector">
+            <div class="type-btn active" onclick="app.selectType('terima')" id="btnTerima">
+                <span class="icon">📥</span>
+                <span class="label">NOTA<br>TERIMA</span>
+            </div>
+            <div class="type-btn" onclick="app.selectType('diagnosa')" id="btnDiagnosa">
+                <span class="icon">🔍</span>
+                <span class="label">HASIL<br>DIAGNOSA</span>
+            </div>
+            <div class="type-btn" onclick="app.selectType('selesai')" id="btnSelesai">
+                <span class="icon">✅</span>
+                <span class="label">NOTA<br>SELESAI</span>
+            </div>
+            <div class="type-btn" onclick="app.selectType('ambil')" id="btnAmbil">
+                <span class="icon">📤</span>
+                <span class="label">NOTA<br>AMBIL</span>
+            </div>
+        </div>
+
+        <!-- FORM CARD -->
+        <div class="form-card active" id="formCard">
+            <form id="notaForm" onsubmit="event.preventDefault(); app.buatPreview();">
+                <div class="form-title">
+                    <span id="formTitle">📥 Nota Penerimaan HP</span>
+                </div>
+
+                <!-- Nama & Import Kontak -->
+                <div class="form-group">
+                    <label>Nama Pelanggan *</label>
+                    <div class="input-with-button">
+                        <input type="text" id="nama" required placeholder="Masukkan nama pelanggan">
+                        <button type="button" class="btn-import" onclick="app.importContact()" title="Import dari Kontak">📇</button>
+                    </div>
+                    <div class="validation-msg" id="namaError">Nama wajib diisi</div>
+                    <button type="button" class="btn-save-contact" onclick="app.saveContact()">💾 Simpan ke Kontak HP</button>
+                </div>
+
+                <!-- No HP -->
+                <div class="form-group">
+                    <label>Nomor HP / WhatsApp *</label>
+                    <input type="tel" id="nohp" placeholder="08xxxxxxxxxx" required 
+                           oninput="app.cleanPhoneInput(this)" 
+                           onblur="app.validatePhone()">
+                    <div class="validation-msg" id="phoneValidation">Format nomor tidak valid (contoh: 08123456789)</div>
+                </div>
+
+                <!-- Merek & Model -->
+                <div class="row">
+                    <div class="form-group">
+                        <label>Merek HP *</label>
+                        <input type="text" id="merek" list="listMerek" required placeholder="Pilih atau ketik">
+                        <datalist id="listMerek">
+                            <option>Samsung</option>
+                            <option>iPhone</option>
+                            <option>Xiaomi</option>
+                            <option>OPPO</option>
+                            <option>Vivo</option>
+                            <option>Realme</option>
+                            <option>Asus</option>
+                            <option>Sony</option>
+                            <option>Google Pixel</option>
+                            <option>Infinix</option>
+                            <option>Techno</option>
+                            <option>Advan</option>
+                            <option>Evercoss</option>
+                            <option>Lainnya</option>
+                        </datalist>
+                        <div class="validation-msg" id="merekError">Merek wajib diisi</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Model *</label>
+                        <input type="text" id="model" required placeholder="Contoh: Galaxy S21">
+                        <div class="validation-msg" id="modelError">Model wajib diisi</div>
+                    </div>
+                </div>
+
+                <!-- Keluhan -->
+                <div class="form-group">
+                    <label>Keluhan/Kerusakan *</label>
+                    <textarea id="keluhan" rows="3" required placeholder="Deskripsikan kerusakan device"></textarea>
+                    <div class="validation-msg" id="keluhanError">Keluhan wajib diisi</div>
+                </div>
+
+                <!-- Kelengkapan (khusus Terima) -->
+                <div id="kelengkapanSection">
+                    <div class="form-group">
+                        <label>Kelengkapan yang Diserahkan</label>
+                        <label class="checkbox-group">
+                            <input type="checkbox" value="SIM Card"> SIM Card
+                        </label>
+                        <label class="checkbox-group">
+                            <input type="checkbox" value="Memory Card"> Memory Card
+                        </label>
+                        <label class="checkbox-group">
+                            <input type="checkbox" value="Casing"> Casing
+                        </label>
+                        <label class="checkbox-group">
+                            <input type="checkbox" value="Charger"> Charger
+                        </label>
+                        <label class="checkbox-group">
+                            <input type="checkbox" value="Box/Dus"> Box/Dus
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Kondisi Fisik & Foto -->
+                <div class="form-group">
+                    <label>Kondisi Fisik Device</label>
+                    <div class="kondisi-checkbox-group" id="kondisiCheckboxGroup">
+                        <div class="kondisi-checkbox" data-value="Penyok">Penyok</div>
+                        <div class="kondisi-checkbox" data-value="Lecet">Lecet</div>
+                        <div class="kondisi-checkbox" data-value="Retak">Retak</div>
+                        <div class="kondisi-checkbox" data-value="Basah">Basah</div>
+                        <div class="kondisi-checkbox" data-value="Lainnya">Lainnya</div>
+                    </div>
+                    <input type="text" id="kondisiLainnya" placeholder="Jika lainnya, sebutkan disini" style="margin-top: 8px;">
+                    
+                    <div style="margin-top: 12px;">
+                        <label>Foto Device (opsional)</label>
+                        <input type="file" id="fotoDevice" accept="image/*" 
+                               onchange="app.handleFotoDevice(this)" 
+                               style="padding: 10px; font-size: 14px;">
+                        <div id="fotoPreview" class="foto-preview"></div>
+                        <small style="color: #666; font-size: 12px;">Tap untuk ambil foto dari kamera atau pilih dari galeri</small>
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div class="form-group">
+                    <label>Password / Pola / PIN Device</label>
+                    <input type="text" id="passwordDevice" placeholder="Untuk keperluan testing (opsional)">
+                </div>
+
+                <!-- Diagnosa Section -->
+                <div id="diagnosaSection" style="display:none;">
+                    <div class="form-group">
+                        <label>Hasil Pemeriksaan *</label>
+                        <textarea id="hasilDiagnosa" rows="3" placeholder="Detail hasil diagnosa teknisi"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Sparepart Diperlukan</label>
+                        <input type="text" id="sparepart" placeholder="Contoh: LCD Original, Battery">
+                    </div>
+                    <div class="form-group">
+                        <label>Status Perbaikan</label>
+                        <select id="statusDiagnosa">
+                            <option value="bisa">✅ BISA DIPERBAIKI</option>
+                            <option value="tidak">❌ TIDAK BISA DIPERBAIKI</option>
+                            <option value="pending">⏳ MENUNGGU KONFIRMASI</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Selesai Section -->
+                <div id="selesaiSection" style="display:none;">
+                    <div class="form-group">
+                        <label>Detail Perbaikan *</label>
+                        <textarea id="detailPerbaikan" rows="3" placeholder="Sparepart yang diganti, aksi perbaikan"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Status Hasil</label>
+                        <select id="statusSelesai">
+                            <option value="normal">✅ BERFUNGSI NORMAL</option>
+                            <option value="partial">⚠️ BERFUNGSI SEBAGIAN</option>
+                            <option value="tidak">❌ TIDAK BISA DIPERBAIKI</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Siap Diambil Tanggal</label>
+                        <input type="text" id="siapAmbil" placeholder="Contoh: 2 hari lagi">
+                    </div>
+                </div>
+
+                <!-- Ambil Section -->
+                <div id="ambilSection" style="display:none;">
+                    <div class="form-group">
+                        <label>Status Pengambilan</label>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div class="status-option active" onclick="app.selectAmbilStatus('diambil')" id="statusDiambil">
+                                ✅ DIAMBIL
+                            </div>
+                            <div class="status-option" onclick="app.selectAmbilStatus('batal')" id="statusBatal">
+                                ❌ DIBATALKAN
+                            </div>
+                        </div>
+                    </div>
+                    <div id="alasanBatalGroup" style="display:none;">
+                        <div class="form-group">
+                            <label>Alasan Pembatalan</label>
+                            <select id="alasanBatal">
+                                <option value="Tidak bisa diperbaiki">Tidak bisa diperbaiki</option>
+                                <option value="Biaya mahal">Biaya terlalu mahal</option>
+                                <option value="Sparepart tidak ada">Sparepart tidak tersedia</option>
+                                <option value="Pelanggan membatalkan">Pelanggan membatalkan</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Biaya -->
+                <div class="row-3">
+                    <div class="form-group">
+                        <label>Total Biaya (Rp)</label>
+                        <input type="number" id="totalBiaya" min="0" step="1000" 
+                               oninput="app.hitungSisa()" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>DP / Panjar (Rp)</label>
+                        <input type="number" id="dp" min="0" step="1000" 
+                               oninput="app.hitungSisa()" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Sisa (Rp)</label>
+                        <input type="text" id="sisa" readonly style="background:#f0f0f0; font-weight: 600;" placeholder="0">
+                    </div>
+                </div>
+
+                <!-- Estimasi & Catatan -->
+                <div class="form-group">
+                    <label>Estimasi Waktu Pengerjaan</label>
+                    <input type="text" id="estimasi" placeholder="Contoh: 1-2 hari kerja">
+                </div>
+                <div class="form-group">
+                    <label>Catatan Tambahan</label>
+                    <input type="text" id="catatan" placeholder="Informasi penting lainnya">
+                </div>
+
+                <!-- Auto Print -->
+                <div class="form-group">
+                    <label class="checkbox-group" style="margin-bottom: 15px;">
+                        <input type="checkbox" id="printThermal"> 
+                        <span>Auto-print ke Bluetooth Printer setelah simpan</span>
+                    </label>
+                </div>
+
+                <!-- Submit Buttons -->
+                <button type="submit" class="btn-primary">👁️ Lihat Preview & Simpan Nota</button>
+                <button type="button" class="btn-secondary" onclick="app.resetForm()">🗑️ Reset Form</button>
+            </form>
+        </div>
+
+        <!-- PREVIEW CARD -->
+        <div class="preview-card" id="previewCard">
+            <div class="nota-paper" id="notaContent"></div>
+            
+            <div style="background:#f5f5f5; padding:15px; border-radius:12px; margin-bottom:15px;">
+                <div style="font-weight:600; margin-bottom:12px; color: #333;">🖨️ Opsi Cetak & Kirim:</div>
+                <div class="action-grid">
+                    <button class="btn-action btn-wa-text" onclick="app.kirimWA('teks')">
+                        💬<br>WA Teks
+                    </button>
+                    <button class="btn-action btn-wa-img" onclick="app.kirimWA('gambar')">
+                        📷<br>WA Gambar
+                    </button>
+                    <button class="btn-action btn-bluetooth" onclick="app.printBluetooth()">
+                        🖨️<br>Bluetooth
+                    </button>
+                    <button class="btn-action btn-pdf" onclick="app.generatePDF()">
+                        📄<br>PDF
+                    </button>
+                    <button class="btn-action btn-preview-thermal" onclick="app.previewThermal()">
+                        🔍<br>Thermal
+                    </button>
+                </div>
+                <button class="btn-secondary" onclick="window.print()">🖨️ Cetak Printer Biasa</button>
+            </div>
+
+            <div class="workflow-buttons" id="workflowButtons"></div>
+            
+            <button class="btn-secondary" onclick="app.buatNotaBaru()">🔄 Buat Nota Baru</button>
+            <button class="btn-secondary" onclick="app.backToForm()">← Kembali Edit</button>
+        </div>
+
+        <!-- HISTORY CARD -->
+        <div class="history-card" id="historyCard">
+            <div class="form-title">
+                📋 Riwayat Service
+                <button class="btn-icon" onclick="app.backToForm()" style="background:#f0f0f0; color: #333; padding: 8px 12px;">✕</button>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="statTotal">0</div>
+                    <div class="stat-label">Total Nota</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statBulanIni">0</div>
+                    <div class="stat-label">Bulan Ini</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statSelesai">0</div>
+                    <div class="stat-label">Selesai</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statPending">0</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="searchHistory" placeholder="🔍 Cari nama, no hp, atau device..." 
+                       oninput="app.renderHistory()" style="margin-bottom:10px;">
+                <select id="filterType" onchange="app.renderHistory()">
+                    <option value="">📂 Semua Status</option>
+                    <option value="terima">📥 Terima</option>
+                    <option value="diagnosa">🔍 Diagnosa</option>
+                    <option value="selesai">✅ Selesai</option>
+                    <option value="ambil">📤 Ambil</option>
+                </select>
+            </div>
+
+            <div id="historyList" style="max-height: 450px; overflow-y: auto; -webkit-overflow-scrolling: touch;"></div>
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px;">
+                <button class="btn-secondary" onclick="app.exportCSV()">📊 Export CSV</button>
+                <button class="btn-secondary" onclick="app.exportJSON()">💾 Backup Data</button>
+            </div>
+        </div>
+
+        <!-- SETTINGS CARD -->
+        <div class="settings-card" id="settingsCard">
+            <div class="form-title">
+                ⚙️ Pengaturan Toko
+                <button class="btn-icon" onclick="app.backToForm()" style="background:#f0f0f0; color: #333; padding: 8px 12px;">✕</button>
+            </div>
+
+            <div class="form-group">
+                <label>Nama Toko</label>
+                <input type="text" id="settingNamaToko" placeholder="Nama bisnis Anda">
+            </div>
+            
+            <div class="form-group">
+                <label>Slogan Toko</label>
+                <input type="text" id="settingSlogan" placeholder="Misal: Service Cepat & Bergaransi">
+            </div>
+            
+            <div class="form-group">
+                <label>Warna Utama Tema</label>
+                <div style="display: flex; align-items: center;">
+                    <input type="color" id="settingPrimaryColor" value="#667eea" style="width: 60px; height: 40px; padding: 2px;">
+                    <span class="color-preview" id="primaryColorPreview" style="background:#667eea;"></span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Alamat Toko</label>
+                <input type="text" id="settingAlamat" placeholder="Alamat lengkap toko">
+            </div>
+            
+            <div class="form-group">
+                <label>No. Telepon Toko</label>
+                <input type="tel" id="settingTelepon" placeholder="Nomor telepon/whatsapp toko">
+            </div>
+
+            <div class="form-group">
+                <label>Logo Toko (Max 500KB, rekomendasi 512x512)</label>
+                <div class="logo-preview" id="logoPreview">
+                    <span style="color: #999; font-size: 12px;">Belum ada logo</span>
+                </div>
+                <input type="file" id="logoInput" accept="image/*" onchange="app.handleLogo(event)" style="padding: 10px;">
+                <button onclick="app.removeLogo()" class="btn-secondary" style="margin-top:8px; font-size: 13px;">🗑️ Hapus Logo</button>
+            </div>
+
+            <div class="form-group">
+                <label>Ukuran Printer Thermal</label>
+                <select id="printerSize">
+                    <option value="58">58 mm (Standard)</option>
+                    <option value="75">75 mm</option>
+                    <option value="80">80 mm</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Auto Follow-up WhatsApp</label>
+                <label class="checkbox-group">
+                    <input type="checkbox" id="autoWASelesai"> 
+                    Kirim WA notifikasi saat service selesai
+                </label>
+                <label class="checkbox-group">
+                    <input type="checkbox" id="autoWAAmbil"> 
+                    Kirim WA notifikasi saat diambil
+                </label>
+                <textarea id="waNotifTemplate" rows="4" placeholder="Template notifikasi WA..." 
+                    style="margin-top: 10px; font-size: 13px;">Halo {nama}, perangkat {device} Anda sudah *{status}*. Silakan ambil di toko kami. Terima kasih 🙏
+
+{nota_id}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Footer per Tipe Nota</label>
+                <div style="margin-bottom: 10px;">
+                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-weight: 500;">
+                        <input type="checkbox" id="footerTerimaEnabled"> 📥 Terima
+                    </label>
+                    <textarea id="footerTerimaText" rows="2" placeholder="Footer nota terima" style="font-size: 13px;"></textarea>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-weight: 500;">
+                        <input type="checkbox" id="footerDiagnosaEnabled"> 🔍 Diagnosa
+                    </label>
+                    <textarea id="footerDiagnosaText" rows="2" style="font-size: 13px;"></textarea>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-weight: 500;">
+                        <input type="checkbox" id="footerSelesaiEnabled"> ✅ Selesai
+                    </label>
+                    <textarea id="footerSelesaiText" rows="2" style="font-size: 13px;"></textarea>
+                </div>
+                <div>
+                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-weight: 500;">
+                        <input type="checkbox" id="footerAmbilEnabled"> 📤 Ambil/Batal
+                    </label>
+                    <textarea id="footerAmbilText" rows="2" style="font-size: 13px;"></textarea>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Template WhatsApp (Teks Nota)</label>
+                <textarea id="templateText" rows="5" placeholder="Template pesan WA..." style="font-size: 13px;">*{toko}*
+━━━━━━━━━━━━━━━
+{type_badge}
+━━━━━━━━━━━━━━━
+
+🆔 No: *{nota_id}*
+📅 {tanggal} | ⏰ {jam}
+
+👤 *Pelanggan:* {nama}
+📱 *Device:* {device}
+
+📋 *Keluhan:*
+{keluhan}
+
+{kelengkapan_line}
+💰 *Estimasi Biaya:* Rp {biaya}
+⏳ *Estimasi Waktu:* {estimasi}
+
+📝 *Catatan:* {catatan}
+
+━━━━━━━━━━━━
+{footer}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Syarat & Ketentuan (S&K)</label>
+                <textarea id="skText" rows="6" placeholder="Syarat dan ketentuan service..." style="font-size: 13px;">• Resiko kehilangan data bukan tanggung jawab kami.
+• Barang tidak diambil dalam 30 hari dianggap hangus.
+• Garansi hanya berlaku pada sparepart yang diganti.
+• Kerusakan akibat force majeure di luar tanggung jawab.</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Backup & Restore Data</label>
+                <button class="btn-secondary" onclick="app.backupData()" style="margin-bottom: 8px;">📥 Backup JSON</button>
+                <div style="position: relative;">
+                    <input type="file" id="restoreInput" accept=".json" onchange="app.restoreData(event)" 
+                           style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer;">
+                    <button class="btn-secondary" style="width: 100%; margin-bottom: 8px;">📤 Restore Data</button>
+                </div>
+                <button class="btn-secondary" onclick="app.clearAllData()" style="color:#c62828; border-color: #ffcdd2;">⚠️ Hapus Semua Data</button>
+            </div>
+
+            <button class="btn-primary" onclick="app.saveSettings()">💾 Simpan Pengaturan</button>
+            <button class="btn-secondary" onclick="app.backToForm()">← Kembali</button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Thermal Preview Modal -->
+    <div id="thermalPreviewModal" class="thermal-preview-modal">
+        <div class="thermal-preview-content">
+            <div class="close-modal">
+                <button onclick="app.closeThermalPreview()">Tutup ✕</button>
+            </div>
+            <pre id="thermalPreviewText"></pre>
+        </div>
+    </div>
+
+    <!-- Contact Picker Modal -->
+    <div id="contactPickerModal" class="contact-picker-overlay">
+        <div class="contact-picker-content">
+            <div class="contact-picker-header">
+                <h3>📇 Pilih Kontak</h3>
+                <p>Tap kontak untuk mengisi form otomatis</p>
+            </div>
+            <div class="contact-picker-search">
+                <input type="text" id="contactSearch" placeholder="Cari kontak..." oninput="app.filterContacts()">
+            </div>
+            <div class="contact-list" id="contactList"></div>
+            <div class="contact-picker-close">
+                <button onclick="app.closeContactPicker()">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT -->
+    <script>
+    // ==================== APLIKASI NOTA SERVICE HP ====================
+    const app = (function() {
+        'use strict';
+        
+        // State Management
+        let db;
+        let currentType = 'terima';
+        let currentStatus = 'diambil';
+        let currentNota = null;
+        let tokoSettings = {};
+        let historyData = [];
+        let logoData = null;
+        let fotoDeviceData = null;
+        let footers = { 
+            terima: { text: '', enabled: false }, 
+            diagnosa: { text: '', enabled: false }, 
+            selesai: { text: '', enabled: false }, 
+            ambil: { text: '', enabled: false } 
+        };
+        let skText = "";
+        let autoWASelesai = false;
+        let autoWAAmbil = false;
+        let waNotifTemplate = "";
+        let cachedContacts = [];
+        let isNative = false;
+
+        // ==================== UTILITY FUNCTIONS ====================
+        
+        function detectPlatform() {
+            isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
+            console.log('Platform:', isNative ? 'Native (Android/iOS)' : 'Web Browser');
+            return isNative;
+        }
+
+        function getPlugin(name) {
+            if (!window.Capacitor || !window.Capacitor.Plugins) return null;
+            const plugins = window.Capacitor.Plugins;
+            if (plugins[name]) return plugins[name];
+            // Try lowercase
+            const lowerName = name.toLowerCase();
+            for (let key in plugins) {
+                if (key.toLowerCase() === lowerName) return plugins[key];
+            }
+            return null;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function showToast(msg, duration = 3000) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), duration);
+        }
+
+        function showLoading() { 
+            document.getElementById('loadingOverlay').classList.add('show'); 
+        }
+        
+        function hideLoading() { 
+            document.getElementById('loadingOverlay').classList.remove('show'); 
+        }
+
+        function formatRupiah(num) { 
+            return parseInt(num || 0).toLocaleString('id-ID'); 
+        }
+
+        function formatPhoneDisplay(phone) {
+            if (!phone) return '-';
+            if (typeof phone === 'object') return phone.number || '-';
+            return phone;
+        }
+
+        function cleanPhoneNumber(phone) {
+            if (!phone) return '';
+            let cleaned = phone.toString().replace(/[^\d+]/g, '');
+            
+            if (cleaned.startsWith('+62')) {
+                cleaned = '0' + cleaned.substring(3);
+            } else if (cleaned.startsWith('62')) {
+                cleaned = '0' + cleaned.substring(2);
+            } else if (!cleaned.startsWith('0') && cleaned.startsWith('8')) {
+                cleaned = '0' + cleaned;
+            }
+            return cleaned;
+        }
+
+        function stringToColor(str) {
+            const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140'];
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        // ==================== DATABASE ====================
+        
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('NotaServiceDB', 8);
+                
+                request.onerror = (e) => {
+                    console.error('DB Error:', e.target.error);
+                    reject(e.target.error);
+                };
+                
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    console.log('Database initialized');
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (e) => {
+                    const database = e.target.result;
+                    if (!database.objectStoreNames.contains('nota')) {
+                        const store = database.createObjectStore('nota', { keyPath: 'id' });
+                        store.createIndex('timestamp', 'timestamp', { unique: false });
+                        store.createIndex('type', 'type', { unique: false });
+                        console.log('Object store created');
+                    }
+                };
+            });
+        }
+
+        async function saveToDB(data) {
+            if (!db) await initDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(['nota'], 'readwrite');
+                const store = tx.objectStore('nota');
+                const req = store.put(data);
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function getAllFromDB() {
+            if (!db) await initDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(['nota'], 'readonly');
+                const store = tx.objectStore('nota');
+                const req = store.getAll();
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function deleteFromDB(id) {
+            if (!db) await initDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(['nota'], 'readwrite');
+                const store = tx.objectStore('nota');
+                const req = store.delete(id);
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        // ==================== FORM FUNCTIONS ====================
+        
+        function cleanPhoneInput(el) {
+            let v = el.value.replace(/\D/g, '');
+            if (v.startsWith('62')) v = '0' + v.substring(2);
+            if (v.startsWith('+62')) v = '0' + v.substring(3);
+            el.value = v;
+            return v;
+        }
+
+        function validatePhone() {
+            const inp = document.getElementById('nohp');
+            const v = inp.value.trim();
+            const valid = /^08[1-9]\d{8,11}$/.test(v);
+            inp.classList.toggle('error-input', !valid && v !== '');
+            document.getElementById('phoneValidation').classList.toggle('show', !valid && v !== '');
+            return valid;
+        }
+
+        function hitungSisa() {
+            const total = parseFloat(document.getElementById('totalBiaya').value) || 0;
+            const dp = parseFloat(document.getElementById('dp').value) || 0;
+            const sisa = Math.max(0, total - dp);
+            document.getElementById('sisa').value = sisa > 0 ? formatRupiah(sisa) : '0';
+        }
+
+        function getKondisi() {
+            const arr = [];
+            document.querySelectorAll('.kondisi-checkbox.active').forEach(el => {
+                arr.push(el.dataset.value);
+            });
+            const lainnya = document.getElementById('kondisiLainnya').value.trim();
+            if (lainnya) arr.push(escapeHtml(lainnya));
+            return arr;
+        }
+
+        function validateForm() {
+            let valid = true;
+            const fields = ['nama', 'nohp', 'merek', 'model', 'keluhan'];
+            
+            fields.forEach(field => {
+                const el = document.getElementById(field);
+                const errorEl = document.getElementById(field + 'Error');
+                if (!el.value.trim()) {
+                    if (errorEl) errorEl.classList.add('show');
+                    el.classList.add('error-input');
+                    valid = false;
+                } else {
+                    if (errorEl) errorEl.classList.remove('show');
+                    el.classList.remove('error-input');
+                }
+            });
+
+            if (!validatePhone()) valid = false;
+            
+            return valid;
+        }
+
+        // ==================== CAMERA FUNCTIONS ====================
+        
+        async function handleFotoDevice(input) {
+            if (isNative) {
+                try {
+                    const Camera = getPlugin('Camera');
+                    if (!Camera) {
+                        showToast('❌ Plugin Camera tidak tersedia');
+                        handleFileInput(input);
+                        return;
+                    }
+
+                    const permStatus = await Camera.checkPermissions();
+                    if (permStatus.camera !== 'granted') {
+                        const requestResult = await Camera.requestPermissions();
+                        if (requestResult.camera !== 'granted') {
+                            showToast('⚠️ Izin kamera ditolak, menggunakan galeri...');
+                            await pickFromGallery();
+                            return;
+                        }
+                    }
+
+                    const photo = await Camera.getPhoto({
+                        quality: 85,
+                        allowEditing: false,
+                        resultType: 'DataUrl',
+                        source: 'CAMERA',
+                        saveToGallery: true,
+                        width: 1280,
+                        height: 1280,
+                        correctOrientation: true
+                    });
+
+                    if (photo && photo.dataUrl) {
+                        fotoDeviceData = photo.dataUrl;
+                        updateFotoPreview(fotoDeviceData);
+                        showToast('✅ Foto berhasil diambil');
+                    }
+                } catch (err) {
+                    console.error('Camera error:', err);
+                    if (err.message?.includes('cancelled')) {
+                        showToast('📷 Dibatalkan');
+                    } else {
+                        showToast('❌ Error: ' + err.message);
+                        handleFileInput(input);
+                    }
+                }
+            } else {
+                handleFileInput(input);
+            }
+        }
+
+        function handleFileInput(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('❌ Foto maksimal 5MB');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = e => {
+                fotoDeviceData = e.target.result;
+                updateFotoPreview(fotoDeviceData);
+                showToast('✅ Foto dipilih');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function pickFromGallery() {
+            try {
+                const Camera = getPlugin('Camera');
+                const photo = await Camera.getPhoto({
+                    quality: 85,
+                    allowEditing: false,
+                    resultType: 'DataUrl',
+                    source: 'PHOTOS',
+                    width: 1280,
+                    height: 1280
+                });
+                
+                if (photo?.dataUrl) {
+                    fotoDeviceData = photo.dataUrl;
+                    updateFotoPreview(fotoDeviceData);
+                    showToast('✅ Foto dari galeri');
+                }
+            } catch (err) {
+                showToast('❌ Galeri error: ' + err.message);
+            }
+        }
+
+        function updateFotoPreview(dataUrl) {
+            const preview = document.getElementById('fotoPreview');
+            preview.innerHTML = `<img src="${dataUrl}" alt="Preview">`;
+            preview.style.display = 'block';
+        }
+
+        // ==================== CONTACT FUNCTIONS ====================
+        
+        async function importContact() {
+            if (!isNative) {
+                showToast('ℹ️ Fitur kontak hanya di aplikasi Android');
+                return;
+            }
+
+            showLoading();
+            try {
+                const Contacts = getPlugin('Contacts');
+                if (!Contacts) throw new Error('Plugin Contacts tidak tersedia');
+
+                let permission = await Contacts.requestPermissions?.() || 
+                                await Contacts.checkPermissions?.();
+                
+                const granted = permission?.granted || permission?.contacts === 'granted';
+                if (!granted) {
+                    hideLoading();
+                    showToast('❌ Izin kontak diperlukan');
+                    return;
+                }
+
+                showToast('📇 Memuat kontak...');
+                
+                let result;
+                try {
+                    result = await Contacts.getContacts({ 
+                        projection: { name: true, phones: true, emails: true } 
+                    });
+                } catch (e) {
+                    result = await Contacts.getContacts();
+                }
+
+                let contacts = result?.contacts || result || [];
+                contacts = contacts.filter(c => {
+                    const hasName = c.displayName || c.name?.display || c.name?.given;
+                    const hasPhone = (c.phones?.length > 0) || (c.phoneNumbers?.length > 0);
+                    return hasName || hasPhone;
+                }).map(c => ({
+                    id: c.contactId || c.id || Math.random().toString(36),
+                    displayName: c.displayName || [c.name?.given, c.name?.family].filter(Boolean).join(' ') || 'Unknown',
+                    phones: c.phones || c.phoneNumbers || [],
+                    emails: c.emails || []
+                }));
+
+                hideLoading();
+                
+                if (contacts.length === 0) {
+                    showToast('⚠️ Tidak ada kontak ditemukan');
+                    return;
+                }
+                
+                showContactPicker(contacts);
+            } catch (err) {
+                hideLoading();
+                console.error('Import error:', err);
+                showToast('❌ Error: ' + err.message);
+            }
+        }
+
+        function showContactPicker(contacts) {
+            cachedContacts = contacts;
+            document.getElementById('contactSearch').value = '';
+            renderContactList(contacts);
+            document.getElementById('contactPickerModal').classList.add('active');
+        }
+
+        function renderContactList(contacts) {
+            const list = document.getElementById('contactList');
+            if (!contacts?.length) {
+                list.innerHTML = '<div style="padding:40px; text-align:center; color:#999;">Tidak ada kontak</div>';
+                return;
+            }
+            
+            contacts.sort((a, b) => a.displayName.localeCompare(b.displayName));
+            
+            list.innerHTML = contacts.map((c, i) => {
+                const phone = formatPhoneDisplay(c.phones?.[0]);
+                const color = stringToColor(c.displayName);
+                return `
+                    <div class="contact-item" onclick="app.selectContact(${i})" style="border-left-color: ${color};">
+                        <div class="contact-item-avatar" style="background: ${color};">
+                            ${c.displayName.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="contact-item-info">
+                            <div class="contact-item-name">${escapeHtml(c.displayName)}</div>
+                            <div class="contact-item-phone">${escapeHtml(phone)}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterContacts() {
+            const search = document.getElementById('contactSearch').value.toLowerCase();
+            const filtered = cachedContacts.filter(c => 
+                c.displayName.toLowerCase().includes(search) ||
+                formatPhoneDisplay(c.phones?.[0]).toLowerCase().includes(search)
+            );
+            renderContactList(filtered);
+        }
+
+        function selectContact(index) {
+            const c = cachedContacts[index];
+            if (!c) return;
+            
+            document.getElementById('nama').value = c.displayName;
+            
+            let phone = '';
+            if (c.phones?.length > 0) {
+                const mobile = c.phones.find(p => 
+                    (p.label || '').toLowerCase().includes('mobile')
+                );
+                phone = mobile?.number || c.phones[0].number || c.phones[0];
+            }
+            
+            document.getElementById('nohp').value = cleanPhoneNumber(phone);
+            validatePhone();
+            closeContactPicker();
+            showToast(`✅ ${c.displayName} dipilih`);
+        }
+
+        function closeContactPicker() {
+            document.getElementById('contactPickerModal').classList.remove('active');
+        }
+
+        async function saveContact() {
+            const nama = document.getElementById('nama').value.trim();
+            let nohp = document.getElementById('nohp').value.trim();
+
+            if (!nama || !nohp) {
+                showToast('❌ Nama dan No HP wajib diisi');
+                return;
+            }
+
+            nohp = nohp.replace(/\D/g, '');
+            let phoneFormatted = nohp.startsWith('0') ? '+62' + nohp.substring(1) : 
+                                nohp.startsWith('62') ? '+' + nohp : '+62' + nohp;
+
+            if (!isNative) {
+                fallbackSaveVCard(nama, phoneFormatted);
+                return;
+            }
+
+            showLoading();
+            try {
+                const Contacts = getPlugin('Contacts');
+                if (!Contacts) throw new Error('Plugin tidak tersedia');
+
+                let saved = false;
+                
+                if (Contacts.createContact) {
+                    try {
+                        await Contacts.createContact({
+                            contact: {
+                                name: { display: nama, given: nama.split(' ')[0] },
+                                phones: [{ label: 'mobile', number: phoneFormatted }]
+                            }
+                        });
+                        saved = true;
+                    } catch (e) { console.log('createContact failed:', e.message); }
+                }
+
+                if (!saved && Contacts.saveContact) {
+                    try {
+                        await Contacts.saveContact({ name: nama, phone: phoneFormatted });
+                        saved = true;
+                    } catch (e) { console.log('saveContact failed:', e.message); }
+                }
+
+                hideLoading();
+                
+                if (saved) {
+                    showToast(`✅ Kontak "${nama}" tersimpan`);
+                } else {
+                    openContactIntent(nama, phoneFormatted);
+                }
+            } catch (err) {
+                hideLoading();
+                console.error('Save error:', err);
+                openContactIntent(nama, phoneFormatted);
+            }
+        }
+
+        function openContactIntent(nama, phone) {
+            const App = getPlugin('App');
+            const intent = `intent://contacts/people/#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.dir/contact;S.name=${encodeURIComponent(nama)};S.phone=${encodeURIComponent(phone)};end`;
+            
+            if (App?.openUrl) {
+                App.openUrl({ url: intent });
+            } else {
+                window.location.href = intent;
+            }
+            showToast('📇 Buka aplikasi kontak...');
+        }
+
+        function fallbackSaveVCard(nama, phone) {
+            const vCard = `BEGIN:VCARD\nVERSION:3.0\nFN:${nama}\nTEL:${phone}\nEND:VCARD`;
+            const blob = new Blob([vCard], { type: 'text/vcard' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Kontak_${nama.replace(/\s/g, '_')}.vcf`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('📥 File vCard diunduh');
+        }
+
+        // ==================== NOTA FUNCTIONS ====================
+        
+        async function buatPreview() {
+            if (!validateForm()) {
+                showToast('❌ Lengkapi data wajib!');
+                return;
+            }
+
+            showLoading();
+            try {
+                const device = `${document.getElementById('merek').value} ${document.getElementById('model').value}`.trim();
+                const now = new Date();
+                const notaId = 'SRV-' + Date.now().toString(36).toUpperCase();
+                const originalId = window._lanjutOriginalId || notaId;
+                
+                let timeline = [];
+                if (window._lanjutOriginalId) {
+                    const prev = historyData.find(h => h.id === window._lanjutOriginalId);
+                    if (prev?.timeline) timeline = [...prev.timeline];
+                }
+                timeline.push({ 
+                    status: currentType, 
+                    timestamp: now.toISOString(), 
+                    waktu: now.toLocaleString('id-ID') 
+                });
+
+                const totalBiaya = parseFloat(document.getElementById('totalBiaya').value) || 0;
+                const dp = parseFloat(document.getElementById('dp').value) || 0;
+
+                currentNota = {
+                    id: notaId,
+                    type: currentType,
+                    notaId: notaId,
+                    originalId: originalId,
+                    nama: escapeHtml(document.getElementById('nama').value.trim()),
+                    nohp: document.getElementById('nohp').value,
+                    device: escapeHtml(device),
+                    keluhan: escapeHtml(document.getElementById('keluhan').value.trim()),
+                    totalBiaya: totalBiaya,
+                    dp: dp,
+                    sisa: totalBiaya - dp,
+                    estimasi: escapeHtml(document.getElementById('estimasi').value),
+                    catatan: escapeHtml(document.getElementById('catatan').value),
+                    tanggal: now.toLocaleDateString('id-ID'),
+                    jam: now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+                    timestamp: now.toISOString(),
+                    kelengkapan: currentType === 'terima' ? 
+                        Array.from(document.querySelectorAll('#kelengkapanSection input:checked')).map(cb => cb.value) : [],
+                    kondisi: getKondisi(),
+                    passwordDevice: escapeHtml(document.getElementById('passwordDevice').value),
+                    fotoDevice: fotoDeviceData,
+                    diagnosa: currentType === 'diagnosa' ? {
+                        hasil: escapeHtml(document.getElementById('hasilDiagnosa').value),
+                        sparepart: escapeHtml(document.getElementById('sparepart').value),
+                        status: document.getElementById('statusDiagnosa').value
+                    } : null,
+                    selesai: currentType === 'selesai' ? {
+                        detail: escapeHtml(document.getElementById('detailPerbaikan').value),
+                        status: document.getElementById('statusSelesai').value,
+                        siapAmbil: escapeHtml(document.getElementById('siapAmbil').value)
+                    } : null,
+                    ambil: currentType === 'ambil' ? {
+                        status: currentStatus,
+                        alasan: document.getElementById('alasanBatal').value
+                    } : null,
+                    timeline: timeline
+                };
+
+                delete window._lanjutOriginalId;
+                
+                await saveToHistory(currentNota);
+                renderPreview();
+                
+                document.getElementById('formCard').classList.remove('active');
+                document.getElementById('previewCard').classList.add('active');
+                
+                updateWorkflowButtons();
+                
+                // Auto actions
+                if (currentType === 'selesai' && autoWASelesai) {
+                    setTimeout(() => sendAutoWA(currentNota, 'selesai'), 1000);
+                } else if (currentType === 'ambil' && currentNota.ambil?.status === 'diambil' && autoWAAmbil) {
+                    setTimeout(() => sendAutoWA(currentNota, 'ambil'), 1000);
+                }
+                
+                if (document.getElementById('printThermal').checked) {
+                    setTimeout(() => {
+                        if (confirm('Cetak ke printer thermal?')) printBluetooth();
+                    }, 1500);
+                }
+                
+                localStorage.removeItem('nota_draft');
+                showToast('✅ Nota berhasil disimpan');
+                
+            } catch (err) {
+                console.error('Preview error:', err);
+                showToast('❌ Error: ' + err.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function saveToHistory(nota) {
+            try {
+                await saveToDB(nota);
+                const idx = historyData.findIndex(h => h.id === nota.id);
+                if (idx !== -1) historyData[idx] = nota;
+                else historyData.unshift(nota);
+            } catch (err) {
+                console.error('Save error:', err);
+                throw err;
+            }
+        }
+
+        function getWarrantyText(nota) {
+            if (nota.type !== 'selesai' && nota.type !== 'ambil') return '';
+            let selesaiTime = nota.timeline?.find(t => t.status === 'selesai')?.timestamp;
+            if (!selesaiTime) selesaiTime = nota.timestamp;
+            const expiry = new Date(selesaiTime);
+            expiry.setDate(expiry.getDate() + 30);
+            return `✅ Garansi 30 hari (s.d. ${expiry.toLocaleDateString('id-ID')})`;
+        }
+
+        function renderPreview() {
+            const badgeMap = {
+                terima: { class: 'badge-terima', text: '📥 NOTA PENERIMAAN', paper: 'terima' },
+                diagnosa: { class: 'badge-diagnosa', text: '🔍 HASIL DIAGNOSA', paper: 'diagnosa' },
+                selesai: { class: 'badge-selesai', text: '✅ NOTA SELESAI', paper: 'selesai' },
+                ambil: { 
+                    class: currentNota.ambil?.status === 'batal' ? 'badge-batal' : 'badge-ambil',
+                    text: currentNota.ambil?.status === 'batal' ? '❌ DIBATALKAN' : '📤 DIAMBIL',
+                    paper: currentNota.ambil?.status === 'batal' ? 'batal' : 'ambil'
+                }
+            };
+            
+            const badge = badgeMap[currentType];
+            let html = `<div class="nota-header">`;
+            
+            if (logoData) html += `<img src="${logoData}" class="nota-logo" alt="Logo">`;
+            
+            html += `
+                <h2>${escapeHtml(tokoSettings.nama || 'Nota Service HP')}</h2>
+                ${tokoSettings.slogan ? `<div class="nota-slogan">✨ ${escapeHtml(tokoSettings.slogan)}</div>` : ''}
+                ${tokoSettings.alamat ? `<div class="nota-alamat">📍 ${escapeHtml(tokoSettings.alamat)}</div>` : ''}
+                ${tokoSettings.telepon ? `<div class="nota-telp">📞 ${escapeHtml(tokoSettings.telepon)}</div>` : ''}
+                <span class="nota-type-badge ${badge.class}">${badge.text}</span>
+                <div style="font-size:12px; color:#666; margin-top:5px;">${currentNota.tanggal} • ${currentNota.jam}</div>
+                <div class="nota-id">${currentNota.notaId}</div>
+            </div>`;
+
+            // Customer Info
+            html += `
+                <div class="nota-section">
+                    <div class="nota-section-title">👤 Pelanggan</div>
+                    <div class="nota-row"><span class="nota-label">Nama</span><span class="nota-value">${currentNota.nama}</span></div>
+                    <div class="nota-row"><span class="nota-label">No. HP</span><span class="nota-value">${currentNota.nohp}</span></div>
+                    <div class="nota-row"><span class="nota-label">Device</span><span class="nota-value">${currentNota.device}</span></div>
+                    ${currentNota.passwordDevice ? `<div class="nota-row"><span class="nota-label">Password</span><span class="nota-value">${currentNota.passwordDevice}</span></div>` : ''}
+                </div>`;
+
+            // Service Details
+            html += `
+                <div class="nota-section">
+                    <div class="nota-section-title">📋 Detail Service</div>
+                    <div><strong>Keluhan:</strong> ${currentNota.keluhan}</div>
+                    ${currentNota.kelengkapan?.length ? `<div style="margin-top:5px;"><strong>Kelengkapan:</strong> ${currentNota.kelengkapan.join(', ')}</div>` : ''}
+                    ${currentNota.kondisi?.length ? `<div style="margin-top:5px;"><strong>Kondisi:</strong> ${currentNota.kondisi.join(', ')}</div>` : ''}
+                    ${currentNota.fotoDevice ? `<div style="margin-top:8px;"><img src="${currentNota.fotoDevice}" style="max-width:100%; max-height:100px; border-radius:8px;"></div>` : ''}
+                    ${currentNota.catatan ? `<div style="margin-top:5px;"><strong>📝 Catatan:</strong> ${currentNota.catatan}</div>` : ''}`;
+
+            // Type-specific details
+            if (currentType === 'diagnosa' && currentNota.diagnosa) {
+                const statusText = { bisa: '✅ Bisa diperbaiki', tidak: '❌ Tidak bisa', pending: '⏳ Menunggu konfirmasi' };
+                html += `
+                    <div style="margin-top:10px;"><strong>🔍 Hasil:</strong> ${currentNota.diagnosa.hasil || '-'}</div>
+                    ${currentNota.diagnosa.sparepart ? `<div><strong>Sparepart:</strong> ${currentNota.diagnosa.sparepart}</div>` : ''}
+                    <div><strong>Status:</strong> ${statusText[currentNota.diagnosa.status]}</div>`;
+            }
+
+            if (currentType === 'selesai' && currentNota.selesai) {
+                const statusText = { normal: '✅ Normal', partial: '⚠️ Sebagian', tidak: '❌ Tidak bisa' };
+                html += `
+                    <div style="margin-top:10px;"><strong>✅ Detail:</strong> ${currentNota.selesai.detail || '-'}</div>
+                    <div><strong>Status:</strong> ${statusText[currentNota.selesai.status]}</div>
+                    ${currentNota.selesai.siapAmbil ? `<div><strong>Siap diambil:</strong> ${currentNota.selesai.siapAmbil}</div>` : ''}`;
+            }
+
+            if (currentType === 'ambil' && currentNota.ambil) {
+                if (currentNota.ambil.status === 'diambil') {
+                    html += `<div style="margin-top:10px; background:#e8f5e9; padding:10px; border-radius:8px;"><strong>✅ Sudah diambil</strong></div>`;
+                } else {
+                    html += `<div style="margin-top:10px; background:#ffebee; padding:10px; border-radius:8px;"><strong>❌ Dibatalkan</strong><br>Alasan: ${escapeHtml(currentNota.ambil.alasan || '-')}</div>`;
+                }
+            }
+
+            html += `</div>`; // Close section
+
+            // Payment
+            if (currentNota.totalBiaya > 0) {
+                html += `
+                    <div class="nota-total">
+                        <div class="nota-row"><span class="nota-label">Total Biaya</span><span class="nota-value">Rp ${formatRupiah(currentNota.totalBiaya)}</span></div>
+                        ${currentNota.dp > 0 ? `
+                            <div class="nota-row"><span class="nota-label">DP/Panjar</span><span class="nota-value">Rp ${formatRupiah(currentNota.dp)}</span></div>
+                            <div class="nota-row"><span class="nota-label">Sisa</span><span class="nota-value">Rp ${formatRupiah(currentNota.sisa)}</span></div>
+                        ` : ''}
+                    </div>`;
+            }
+
+            // Timeline
+            if (currentNota.timeline?.length > 1) {
+                html += `<div class="timeline"><div class="timeline-title">📅 Timeline</div>`;
+                const statusNames = { terima: '📥 Diterima', diagnosa: '🔍 Diagnosa', selesai: '✅ Selesai', ambil: '📤 Diambil' };
+                currentNota.timeline.forEach(item => {
+                    html += `<div class="timeline-item">
+                        <span class="timeline-badge"></span>
+                        <span class="timeline-time">${new Date(item.timestamp).toLocaleDateString('id-ID')}</span>
+                        <strong>${statusNames[item.status]}</strong>
+                    </div>`;
+                });
+                html += `</div>`;
+            }
+
+            // Footer & Warranty
+            const footer = footers[currentType]?.enabled ? footers[currentType].text : '';
+            if (footer) html += `<div class="nota-footer">${escapeHtml(footer).replace(/\n/g, '<br>')}</div>`;
+            
+            const warranty = getWarrantyText(currentNota);
+            if (warranty) html += `<div class="warranty-text">${warranty}</div>`;
+
+            // S&K
+            if ((currentType === 'terima' || currentType === 'ambil') && skText.trim()) {
+                html += `<div class="syarat-section"><strong>📜 SYARAT & KETENTUAN</strong>${escapeHtml(skText).replace(/\n/g, '<br>')}</div>`;
+            }
+
+            html += `<div style="text-align:center; margin-top:20px; font-size:11px; color:#999;">Terima kasih atas kepercayaan Anda<br>Simpan nota ini sebagai bukti</div>`;
+
+            const notaContent = document.getElementById('notaContent');
+            notaContent.innerHTML = html;
+            notaContent.className = `nota-paper ${badge.paper}`;
+        }
+
+        function updateWorkflowButtons() {
+            const container = document.getElementById('workflowButtons');
+            if (!currentNota || currentNota.type === 'ambil') {
+                if (currentNota?.type === 'ambil') {
+                    container.innerHTML = '<div style="text-align:center; padding:12px; background:#e8f5e9; border-radius:12px; color:#2e7d32; font-weight:600;">✅ Nota selesai</div>';
+                } else {
+                    container.innerHTML = '';
+                }
+                return;
+            }
+
+            const nextButtons = {
+                terima: { type: 'diagnosa', class: 'diagnosa', text: '🔍 Lanjut ke Diagnosa' },
+                diagnosa: { type: 'selesai', class: 'selesai', text: '✅ Lanjut ke Selesai' },
+                selesai: { type: 'ambil', class: 'ambil', text: '📤 Lanjut ke Ambil' }
+            };
+
+            const next = nextButtons[currentType];
+            if (next) {
+                container.innerHTML = `
+                    <div style="margin-bottom:10px; font-size:13px; color:#666;">📌 Lanjutkan ke tahap berikutnya:</div>
+                    <button class="btn-workflow ${next.class}" onclick="app.lanjutKe('${next.type}')">${next.text}</button>
+                `;
+            }
+        }
+
+        async function lanjutKe(tipeBaru) {
+            if (!currentNota) return;
+            
+            // Copy data ke form
+            document.getElementById('nama').value = currentNota.nama;
+            document.getElementById('nohp').value = currentNota.nohp;
+            const parts = currentNota.device.split(' ');
+            document.getElementById('merek').value = parts[0] || '';
+            document.getElementById('model').value = parts.slice(1).join(' ') || '';
+            document.getElementById('keluhan').value = currentNota.keluhan;
+            document.getElementById('totalBiaya').value = currentNota.totalBiaya || 0;
+            document.getElementById('dp').value = currentNota.dp || 0;
+            hitungSisa();
+            document.getElementById('estimasi').value = currentNota.estimasi || '';
+            document.getElementById('catatan').value = currentNota.catatan || '';
+            document.getElementById('passwordDevice').value = currentNota.passwordDevice || '';
+
+            // Restore kondisi
+            document.querySelectorAll('.kondisi-checkbox').forEach(cb => cb.classList.remove('active'));
+            currentNota.kondisi?.forEach(k => {
+                const el = document.querySelector(`.kondisi-checkbox[data-value="${k}"]`);
+                if (el) el.classList.add('active');
+            });
+            const lainnya = currentNota.kondisi?.filter(k => !['Penyok','Lecet','Retak','Basah','Lainnya'].includes(k)).join(', ');
+            document.getElementById('kondisiLainnya').value = lainnya || '';
+
+            // Restore foto
+            if (currentNota.fotoDevice) {
+                fotoDeviceData = currentNota.fotoDevice;
+                updateFotoPreview(fotoDeviceData);
+            }
+
+            // Reset sections
+            if (tipeBaru === 'diagnosa') {
+                document.getElementById('hasilDiagnosa').value = '';
+                document.getElementById('sparepart').value = '';
+                document.getElementById('statusDiagnosa').value = 'bisa';
+            } else if (tipeBaru === 'selesai') {
+                document.getElementById('detailPerbaikan').value = '';
+                document.getElementById('statusSelesai').value = 'normal';
+                document.getElementById('siapAmbil').value = '';
+            } else if (tipeBaru === 'ambil') {
+                selectAmbilStatus('diambil');
+            }
+
+            selectType(tipeBaru);
+            window._lanjutOriginalId = currentNota.originalId || currentNota.id;
+            
+            document.getElementById('previewCard').classList.remove('active');
+            document.getElementById('formCard').classList.add('active');
+            
+            showToast(`Silakan lengkapi data ${tipeBaru.toUpperCase()}`);
+        }
+
+        // ==================== SHARE & PRINT ====================
+        
+        async function captureNotaAsImage(targetWidth = 400, quality = 0.85, scale = 2) {
+            const notaElem = document.getElementById('notaContent');
+            const originalClass = notaElem.className;
+            
+            notaElem.style.width = targetWidth + 'px';
+            notaElem.classList.add('capture-wide');
+            
+            await new Promise(r => setTimeout(r, 100));
+            
+            try {
+                const canvas = await html2canvas(notaElem, {
+                    scale: scale,
+                    backgroundColor: '#ffffff',
+                    useCORS: true,
+                    logging: false
+                });
+                
+                return new Promise(resolve => {
+                    canvas.toBlob(resolve, 'image/jpeg', quality);
+                });
+            } finally {
+                notaElem.style.width = '';
+                notaElem.className = originalClass;
+            }
+        }
+
+        async function kirimWA(mode) {
+            if (!currentNota) return;
+            
+            const no = currentNota.nohp.replace(/^0/, '62');
+            
+            if (mode === 'teks') {
+                const template = localStorage.getItem('wa_template') || getDefaultWATemplate();
+                const badge = {
+                    terima: '📥 *NOTA PENERIMAAN*',
+                    diagnosa: '🔍 *HASIL DIAGNOSA*',
+                    selesai: '✅ *NOTA SELESAI*',
+                    ambil: currentNota.ambil?.status === 'batal' ? '❌ *DIBATALKAN*' : '📤 *NOTA AMBIL*'
+                }[currentType];
+
+                const msg = template
+                    .replace(/{toko}/g, tokoSettings.nama || 'Service HP')
+                    .replace(/{type_badge}/g, badge)
+                    .replace(/{nota_id}/g, currentNota.notaId)
+                    .replace(/{tanggal}/g, currentNota.tanggal)
+                    .replace(/{jam}/g, currentNota.jam)
+                    .replace(/{nama}/g, currentNota.nama)
+                    .replace(/{device}/g, currentNota.device)
+                    .replace(/{keluhan}/g, currentNota.keluhan)
+                    .replace(/{kelengkapan_line}/g, currentNota.kelengkapan?.length ? `📦 Kelengkapan: ${currentNota.kelengkapan.join(', ')}` : '')
+                    .replace(/{biaya}/g, formatRupiah(currentNota.totalBiaya))
+                    .replace(/{estimasi}/g, currentNota.estimasi || '-')
+                    .replace(/{catatan}/g, currentNota.catatan || '-')
+                    .replace(/{footer}/g, footers[currentType]?.enabled ? footers[currentType].text : '');
+
+                window.open(`https://wa.me/${no}?text=${encodeURIComponent(msg)}`, '_blank');
+                
+            } else if (mode === 'gambar') {
+                showLoading();
+                try {
+                    const blob = await captureNotaAsImage(400, 0.85, 2);
+                    
+                    if (isNative) {
+                        await shareNativeImage(blob, no);
+                    } else if (navigator.share && navigator.canShare({ files: [new File([blob], 'nota.jpg', { type: 'image/jpeg' })] })) {
+                        await navigator.share({
+                            files: [new File([blob], `Nota_${currentNota.notaId}.jpg`, { type: 'image/jpeg' })],
+                            title: `Nota ${currentNota.notaId}`
+                        });
+                    } else {
+                        downloadImage(blob, no);
+                    }
+                } catch (e) {
+                    showToast('❌ Error: ' + e.message);
+                } finally {
+                    hideLoading();
+                }
+            }
+        }
+
+        async function shareNativeImage(blob, no) {
+            const Filesystem = getPlugin('Filesystem');
+            const Share = getPlugin('Share');
+            
+            if (!Filesystem || !Share) {
+                downloadImage(blob, no);
+                return;
+            }
+
+            try {
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                
+                reader.onloadend = async () => {
+                    const base64 = reader.result.split(',')[1];
+                    const fileName = `Nota_${currentNota.notaId}.jpg`;
+                    
+                    await Filesystem.writeFile({
+                        path: fileName,
+                        data: base64,
+                        directory: 'CACHE',
+                        recursive: true
+                    });
+                    
+                    const fileUri = await Filesystem.getUri({
+                        path: fileName,
+                        directory: 'CACHE'
+                    });
+                    
+                    await Share.share({
+                        title: `Nota ${currentNota.notaId}`,
+                        text: `Nota untuk ${currentNota.nama}`,
+                        url: fileUri.uri,
+                        dialogTitle: 'Kirim ke WhatsApp'
+                    });
+                    
+                    showToast('Pilih WhatsApp untuk mengirim');
+                };
+            } catch (err) {
+                console.error('Share error:', err);
+                downloadImage(blob, no);
+            }
+        }
+
+        function downloadImage(blob, no) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Nota_${currentNota.notaId}.jpg`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            setTimeout(() => {
+                const msg = encodeURIComponent(`Halo ${currentNota.nama}, berikut nota service.`);
+                window.open(`https://wa.me/${no}?text=${msg}`, '_blank');
+                showToast('📥 Gambar disimpan, lampirkan di WA');
+            }, 500);
+        }
+
+        async function sendAutoWA(nota, statusType) {
+            if (!nota.nohp) return;
+            const template = waNotifTemplate || "Halo {nama}, perangkat {device} Anda sudah *{status}*. Silakan ambil di toko kami. Terima kasih 🙏\n\n{nota_id}";
+            const statusText = statusType === 'selesai' ? 'SELESAI diperbaiki' : 'SIAP DIAMBIL';
+            const msg = template
+                .replace(/{nama}/g, nota.nama)
+                .replace(/{device}/g, nota.device)
+                .replace(/{nota_id}/g, nota.notaId)
+                .replace(/{status}/g, statusText);
+            
+            const no = nota.nohp.replace(/^0/, '62');
+            window.open(`https://wa.me/${no}?text=${encodeURIComponent(msg)}`, '_blank');
+            showToast(`📱 Notifikasi WA dikirim`);
+        }
+
+        function getDefaultWATemplate() {
+            return `*{toko}*
+━━━━━━━━━━━━━━━
+{type_badge}
+━━━━━━━━━━━━━━━
+
+🆔 No: *{nota_id}*
+📅 {tanggal} | ⏰ {jam}
+
+👤 *Pelanggan:* {nama}
+📱 *Device:* {device}
+
+📋 *Keluhan:*
+{keluhan}
+
+{kelengkapan_line}
+💰 *Biaya:* Rp {biaya}
+⏳ *Estimasi:* {estimasi}
+
+📝 *Catatan:* {catatan}
+
+━━━━━━━━━━━━
+{footer}`;
+        }
+
+        // ==================== THERMAL PRINTER ====================
+        
+        class ThermalPrinter {
+            constructor() {
+                this.paperSize = localStorage.getItem('printer_size') || '58';
+            }
+
+            encodeText(data) {
+                const lines = [];
+                const width = this.paperSize === '80' ? 48 : this.paperSize === '75' ? 42 : 32;
+                
+                lines.push('='.repeat(width));
+                lines.push(this.centerText(data.toko?.toUpperCase() || 'NOTA SERVICE', width));
+                if (data.slogan) lines.push(this.centerText(data.slogan, width));
+                if (data.telepon) lines.push(this.centerText(`Telp: ${data.telepon}`, width));
+                lines.push('='.repeat(width));
+                lines.push(`No   : ${data.id}`);
+                lines.push(`Tgl  : ${data.tanggal}`);
+                lines.push(`Nama : ${data.nama}`);
+                lines.push(`HP   : ${data.nohp}`);
+                lines.push(`Dev  : ${data.device}`);
+                lines.push('-'.repeat(width));
+                lines.push('KELUHAN:');
+                
+                // Word wrap keluhan
+                const keluhanLines = this.wrapText(data.keluhan, width);
+                keluhanLines.forEach(l => lines.push(l));
+                
+                lines.push('-'.repeat(width));
+                
+                if (data.biaya > 0) {
+                    lines.push('');
+                    lines.push(this.rightAlign(`Total: Rp ${formatRupiah(data.biaya)}`, width));
+                }
+                
+                lines.push('');
+                lines.push(this.centerText('Terima Kasih', width));
+                if (data.footer) lines.push(this.centerText(data.footer, width));
+                lines.push(this.centerText('Simpan Nota Ini', width));
+                lines.push('='.repeat(width));
+                
+                return lines.join('\n');
+            }
+
+            centerText(text, width) {
+                const pad = Math.max(0, Math.floor((width - text.length) / 2));
+                return ' '.repeat(pad) + text;
+            }
+
+            rightAlign(text, width) {
+                const pad = Math.max(0, width - text.length);
+                return ' '.repeat(pad) + text;
+            }
+
+            wrapText(text, width) {
+                const words = text.split(' ');
+                const lines = [];
+                let current = '';
+                
+                words.forEach(word => {
+                    if ((current + word).length > width) {
+                        lines.push(current.trim());
+                        current = word + ' ';
+                    } else {
+                        current += word + ' ';
+                    }
+                });
+                if (current.trim()) lines.push(current.trim());
+                
+                return lines.length ? lines : [text];
+            }
+
+            async print(data) {
+                if (!isNative) {
+                    throw new Error('Printer thermal hanya tersedia di aplikasi Android');
+                }
+
+                const BluetoothLE = getPlugin('BluetoothLe');
+                if (!BluetoothLE) throw new Error('Plugin Bluetooth tidak tersedia');
+
+                try {
+                    await BluetoothLE.initialize();
+                    
+                    showToast('🔍 Mencari printer...');
+                    const devices = await this.scanPrinter(BluetoothLE);
+                    
+                    if (!devices.length) throw new Error('Printer tidak ditemukan');
+                    
+                    const printer = devices[0];
+                    showToast(`📡 Menghubungkan ke ${printer.name}...`);
+                    
+                    await BluetoothLE.connect({ deviceId: printer.deviceId });
+                    
+                    const text = this.encodeText(data);
+                    const encoder = new TextEncoder();
+                    const bytes = encoder.encode(text + '\n\n\n\n\x1D\x56\x00'); // Feed and cut
+                    
+                    // Try write dengan berbagai characteristic
+                    const services = [
+                        '000018f0-0000-1000-8000-00805f9b34fb',
+                        'e7810a71-73ae-499d-8c15-faa9aef0c3f2'
+                    ];
+                    
+                    let written = false;
+                    for (const service of services) {
+                        try {
+                            await BluetoothLE.write({
+                                deviceId: printer.deviceId,
+                                service: service,
+                                characteristic: '00002af1-0000-1000-8000-00805f9b34fb',
+                                value: btoa(String.fromCharCode(...bytes))
+                            });
+                            written = true;
+                            break;
+                        } catch (e) { continue; }
+                    }
+                    
+                    await BluetoothLE.disconnect({ deviceId: printer.deviceId });
+                    
+                    if (!written) throw new Error('Gagal menulis ke printer');
+                    showToast('✅ Nota tercetak!');
+                    
+                } catch (err) {
+                    throw err;
+                }
+            }
+
+            async scanPrinter(BluetoothLE, timeout = 5000) {
+                const printers = [];
+                
+                const handler = (result) => {
+                    if (result.device?.name && (
+                        result.device.name.includes('Printer') ||
+                        result.device.name.includes('POS') ||
+                        result.device.name.includes('XP-') ||
+                        result.device.name.includes('EPSON')
+                    )) {
+                        printers.push(result.device);
+                    }
+                };
+                
+                // Add listener jika tersedia
+                if (BluetoothLE.addListener) {
+                    BluetoothLE.addListener('onScanResult', handler);
+                }
+                
+                await BluetoothLE.startScan({ services: [] });
+                
+                await new Promise(resolve => setTimeout(resolve, timeout));
+                
+                await BluetoothLE.stopScan();
+                
+                return printers;
+            }
+        }
+
+        const printer = new ThermalPrinter();
+
+        async function printBluetooth() {
+            if (!currentNota) {
+                showToast('Buat nota terlebih dahulu');
+                return;
+            }
+            
+            showLoading();
+            try {
+                await printer.print({
+                    toko: tokoSettings.nama || 'Service HP',
+                    slogan: tokoSettings.slogan,
+                    telepon: tokoSettings.telepon,
+                    id: currentNota.notaId,
+                    tanggal: `${currentNota.tanggal} ${currentNota.jam}`,
+                    nama: currentNota.nama,
+                    nohp: currentNota.nohp,
+                    device: currentNota.device,
+                    keluhan: currentNota.keluhan,
+                    biaya: currentNota.totalBiaya,
+                    footer: footers[currentType]?.enabled ? footers[currentType].text : ''
+                });
+            } catch (err) {
+                console.error('Print error:', err);
+                showToast('❌ ' + err.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function previewThermal() {
+            if (!currentNota) {
+                showToast('Buat nota terlebih dahulu');
+                return;
+            }
+            
+            const text = printer.encodeText({
+                toko: tokoSettings.nama || 'Service HP',
+                slogan: tokoSettings.slogan,
+                telepon: tokoSettings.telepon,
+                id: currentNota.notaId,
+                tanggal: `${currentNota.tanggal} ${currentNota.jam}`,
+                nama: currentNota.nama,
+                nohp: currentNota.nohp,
+                device: currentNota.device,
+                keluhan: currentNota.keluhan,
+                biaya: currentNota.totalBiaya,
+                footer: footers[currentType]?.enabled ? footers[currentType].text : ''
+            });
+            
+            document.getElementById('thermalPreviewText').textContent = text;
+            document.getElementById('thermalPreviewModal').classList.add('active');
+        }
+
+        function closeThermalPreview() {
+            document.getElementById('thermalPreviewModal').classList.remove('active');
+        }
+
+        // ==================== PDF ====================
+        
+        async function generatePDF() {
+            if (!currentNota) return;
+            
+            showLoading();
+            try {
+                const blob = await captureNotaAsImage(500, 0.9, 2);
+                const imgData = URL.createObjectURL(blob);
+                
+                const img = new Image();
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = imgData;
+                });
+                
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                
+                const imgWidth = 190;
+                const imgHeight = (img.height * imgWidth) / img.width;
+                
+                doc.addImage(imgData, 'JPEG', 10, 10, imgWidth, Math.min(imgHeight, 270));
+                doc.save(`Nota_${currentNota.notaId}.pdf`);
+                
+                URL.revokeObjectURL(imgData);
+                showToast('✅ PDF diunduh');
+            } catch (e) {
+                showToast('❌ Error PDF: ' + e.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // ==================== UI NAVIGATION ====================
+        
+        function selectType(type) {
+            currentType = type;
+            
+            ['terima', 'diagnosa', 'selesai', 'ambil'].forEach(t => {
+                document.getElementById(`btn${t.charAt(0).toUpperCase() + t.slice(1)}`)
+                    .classList.toggle('active', t === type);
+            });
+            
+            document.querySelectorAll('.step').forEach(s => {
+                s.classList.toggle('active', s.dataset.step === type);
+            });
+            
+            const titles = {
+                terima: '📥 Nota Penerimaan',
+                diagnosa: '🔍 Hasil Diagnosa',
+                selesai: '✅ Nota Selesai',
+                ambil: '📤 Nota Ambil/Batal'
+            };
+            document.getElementById('formTitle').textContent = titles[type];
+            
+            document.getElementById('kelengkapanSection').style.display = type === 'terima' ? 'block' : 'none';
+            document.getElementById('diagnosaSection').style.display = type === 'diagnosa' ? 'block' : 'none';
+            document.getElementById('selesaiSection').style.display = type === 'selesai' ? 'block' : 'none';
+            document.getElementById('ambilSection').style.display = type === 'ambil' ? 'block' : 'none';
+        }
+
+        function selectAmbilStatus(status) {
+            currentStatus = status;
+            document.getElementById('statusDiambil').classList.toggle('active', status === 'diambil');
+            document.getElementById('statusBatal').classList.toggle('active', status === 'batal');
+            document.getElementById('alasanBatalGroup').style.display = status === 'batal' ? 'block' : 'none';
+        }
+
+        function resetForm() {
+            document.getElementById('notaForm').reset();
+            document.querySelectorAll('.kondisi-checkbox').forEach(c => c.classList.remove('active'));
+            document.getElementById('kondisiLainnya').value = '';
+            fotoDeviceData = null;
+            document.getElementById('fotoPreview').innerHTML = '';
+            document.getElementById('fotoPreview').style.display = 'none';
+            selectType('terima');
+            selectAmbilStatus('diambil');
+            hitungSisa();
+            localStorage.removeItem('nota_draft');
+            showToast('✅ Form direset');
+        }
+
+        function buatNotaBaru() {
+            resetForm();
+            currentNota = null;
+            delete window._lanjutOriginalId;
+            document.getElementById('previewCard').classList.remove('active');
+            document.getElementById('formCard').classList.add('active');
+        }
+
+        function backToForm() {
+            document.querySelectorAll('.history-card, .settings-card, .preview-card').forEach(c => {
+                c.classList.remove('active');
+            });
+            document.getElementById('formCard').classList.add('active');
+            delete window._lanjutOriginalId;
+        }
+
+        // ==================== HISTORY ====================
+        
+        async function loadHistory() {
+            try {
+                const data = await getAllFromDB();
+                historyData = data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            } catch (err) {
+                console.error('Load history error:', err);
+                historyData = [];
+            }
+        }
+
+        async function renderHistory() {
+            await loadHistory();
+            
+            const search = document.getElementById('searchHistory')?.value.toLowerCase() || '';
+            const filter = document.getElementById('filterType')?.value || '';
+            
+            let filtered = historyData;
+            if (search) {
+                filtered = filtered.filter(h => 
+                    h.nama.toLowerCase().includes(search) ||
+                    h.nohp.includes(search) ||
+                    h.device.toLowerCase().includes(search)
+                );
+            }
+            if (filter) {
+                filtered = filtered.filter(h => h.type === filter);
+            }
+            
+            // Stats
+            const now = new Date();
+            const bulanIni = historyData.filter(h => {
+                const d = new Date(h.timestamp);
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            }).length;
+            
+            document.getElementById('statTotal').textContent = historyData.length;
+            document.getElementById('statBulanIni').textContent = bulanIni;
+            document.getElementById('statSelesai').textContent = historyData.filter(h => 
+                h.type === 'ambil' && h.ambil?.status === 'diambil'
+            ).length;
+            document.getElementById('statPending').textContent = historyData.filter(h => 
+                h.type === 'terima' || h.type === 'diagnosa'
+            ).length;
+            
+            // Render list
+            const list = document.getElementById('historyList');
+            if (!filtered.length) {
+                list.innerHTML = '<div style="text-align:center; padding:40px; color:#999;">Tidak ada data</div>';
+                return;
+            }
+            
+            const typeColors = {
+                terima: '#ff9800',
+                diagnosa: '#2196f3',
+                selesai: '#00bcd4',
+                ambil: '#4caf50'
+            };
+            
+            list.innerHTML = filtered.map(h => `
+                <div class="history-item" onclick="app.loadHistoryItem('${h.id}')">
+                    <div class="history-header">
+                        <div class="history-name">${escapeHtml(h.nama)}</div>
+                        <div class="history-type" style="background:${typeColors[h.type]}; color:white;">
+                            ${h.type}
+                        </div>
+                    </div>
+                    <div style="font-size:13px; color:#666;">
+                        📱 ${escapeHtml(h.device)} | 💰 Rp ${formatRupiah(h.totalBiaya)}
+                    </div>
+                    <div style="font-size:12px; color:#999;">
+                        ${h.notaId} | ${h.tanggal}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadHistoryItem(id) {
+            const nota = historyData.find(h => h.id === id);
+            if (!nota) return;
+            
+            currentNota = nota;
+            currentType = nota.type;
+            renderPreview();
+            updateWorkflowButtons();
+            
+            document.getElementById('historyCard').classList.remove('active');
+            document.getElementById('previewCard').classList.add('active');
+        }
+
+        function showHistory() {
+            renderHistory();
+            document.querySelectorAll('.form-card, .preview-card, .settings-card').forEach(c => {
+                c.classList.remove('active');
+            });
+            document.getElementById('historyCard').classList.add('active');
+        }
+
+        // ==================== SETTINGS ====================
+        
+        function showSettings() {
+            document.getElementById('settingNamaToko').value = tokoSettings.nama || '';
+            document.getElementById('settingSlogan').value = tokoSettings.slogan || '';
+            document.getElementById('settingPrimaryColor').value = tokoSettings.primaryColor || '#667eea';
+            document.getElementById('primaryColorPreview').style.backgroundColor = tokoSettings.primaryColor || '#667eea';
+            document.getElementById('settingAlamat').value = tokoSettings.alamat || '';
+            document.getElementById('settingTelepon').value = tokoSettings.telepon || '';
+            document.getElementById('templateText').value = localStorage.getItem('wa_template') || '';
+            document.getElementById('printerSize').value = localStorage.getItem('printer_size') || '58';
+            document.getElementById('autoWASelesai').checked = localStorage.getItem('auto_wa_selesai') === 'true';
+            document.getElementById('autoWAAmbil').checked = localStorage.getItem('auto_wa_ambil') === 'true';
+            document.getElementById('waNotifTemplate').value = localStorage.getItem('wa_notif_template') || '';
+            
+            // Footers
+            const f = JSON.parse(localStorage.getItem('footers_settings') || '{}');
+            Object.assign(footers, f);
+            
+            document.getElementById('footerTerimaText').value = footers.terima.text;
+            document.getElementById('footerTerimaEnabled').checked = footers.terima.enabled;
+            document.getElementById('footerDiagnosaText').value = footers.diagnosa.text;
+            document.getElementById('footerDiagnosaEnabled').checked = footers.diagnosa.enabled;
+            document.getElementById('footerSelesaiText').value = footers.selesai.text;
+            document.getElementById('footerSelesaiEnabled').checked = footers.selesai.enabled;
+            document.getElementById('footerAmbilText').value = footers.ambil.text;
+            document.getElementById('footerAmbilEnabled').checked = footers.ambil.enabled;
+            
+            document.getElementById('skText').value = skText;
+            
+            // Logo
+            if (logoData) {
+                document.getElementById('logoPreview').innerHTML = `<img src="${logoData}" style="max-width:100%;max-height:100%;">`;
+            }
+            
+            document.querySelectorAll('.form-card, .preview-card, .history-card').forEach(c => {
+                c.classList.remove('active');
+            });
+            document.getElementById('settingsCard').classList.add('active');
+        }
+
+        function saveSettings() {
+            tokoSettings = {
+                nama: document.getElementById('settingNamaToko').value,
+                slogan: document.getElementById('settingSlogan').value,
+                primaryColor: document.getElementById('settingPrimaryColor').value,
+                alamat: document.getElementById('settingAlamat').value,
+                telepon: document.getElementById('settingTelepon').value
+            };
+            
+            localStorage.setItem('toko_settings', JSON.stringify(tokoSettings));
+            localStorage.setItem('wa_template', document.getElementById('templateText').value);
+            localStorage.setItem('printer_size', document.getElementById('printerSize').value);
+            localStorage.setItem('auto_wa_selesai', document.getElementById('autoWASelesai').checked);
+            localStorage.setItem('auto_wa_ambil', document.getElementById('autoWAAmbil').checked);
+            localStorage.setItem('wa_notif_template', document.getElementById('waNotifTemplate').value);
+            
+            footers = {
+                terima: { text: document.getElementById('footerTerimaText').value, enabled: document.getElementById('footerTerimaEnabled').checked },
+                diagnosa: { text: document.getElementById('footerDiagnosaText').value, enabled: document.getElementById('footerDiagnosaEnabled').checked },
+                selesai: { text: document.getElementById('footerSelesaiText').value, enabled: document.getElementById('footerSelesaiEnabled').checked },
+                ambil: { text: document.getElementById('footerAmbilText').value, enabled: document.getElementById('footerAmbilEnabled').checked }
+            };
+            localStorage.setItem('footers_settings', JSON.stringify(footers));
+            localStorage.setItem('sk_text', document.getElementById('skText').value);
+            
+            // Apply theme
+            document.getElementById('tokoNameDisplay').textContent = tokoSettings.nama || 'Nota Service HP';
+            document.getElementById('tokoSloganDisplay').textContent = tokoSettings.slogan || '';
+            
+            if (tokoSettings.primaryColor) {
+                document.documentElement.style.setProperty('--primary', tokoSettings.primaryColor);
+                document.getElementById('themeColorMeta').content = tokoSettings.primaryColor;
+            }
+            
+            showToast('✅ Pengaturan disimpan');
+            backToForm();
+        }
+
+        function handleLogo(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 500 * 1024) {
+                showToast('❌ Logo max 500KB');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = ev => {
+                logoData = ev.target.result;
+                localStorage.setItem('toko_logo', logoData);
+                document.getElementById('logoPreview').innerHTML = `<img src="${logoData}" style="max-width:100%;max-height:100%;">`;
+                document.getElementById('headerIcon').innerHTML = `<img src="${logoData}" style="width:100%;height:100%;object-fit:contain;">`;
+                showToast('✅ Logo diupdate');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeLogo() {
+            logoData = null;
+            localStorage.removeItem('toko_logo');
+            document.getElementById('logoPreview').innerHTML = '<span style="color:#999;font-size:12px;">Belum ada logo</span>';
+            document.getElementById('headerIcon').innerHTML = '📱';
+            showToast('Logo dihapus');
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('dark_mode', isDark);
+            showToast(isDark ? '🌙 Mode gelap aktif' : '☀️ Mode terang aktif');
+        }
+
+        // ==================== EXPORT/IMPORT ====================
+        
+        function exportCSV() {
+            if (!historyData.length) {
+                showToast('Tidak ada data untuk export');
+                return;
+            }
+            
+            let csv = '\ufeffNo,ID,Tanggal,Jam,Tipe,Nama,NoHP,Device,Keluhan,TotalBiaya,DP,Sisa,Status\n';
+            historyData.forEach((h, i) => {
+                csv += `${i+1},"${h.notaId}","${h.tanggal}","${h.jam}","${h.type}","${h.nama}","${h.nohp}","${h.device}","${h.keluhan}",${h.totalBiaya},${h.dp},${h.sisa},"${h.ambil?.status || '-'}"\n`;
+            });
+            
+            downloadFile(csv, `Riwayat_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv');
+            showToast('✅ CSV diunduh');
+        }
+
+        function exportJSON() {
+            const data = {
+                settings: tokoSettings,
+                history: historyData,
+                logo: logoData,
+                footers: footers,
+                sk: skText,
+                autoWASelesai,
+                autoWAAmbil,
+                waNotifTemplate,
+                exported: new Date().toISOString()
+            };
+            
+            downloadFile(JSON.stringify(data, null, 2), `Backup_${new Date().toISOString().slice(0,10)}.json`, 'application/json');
+            showToast('✅ Backup diunduh');
+        }
+
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function restoreData(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (!confirm('⚠️ Ini akan menimpa data yang ada. Lanjutkan?')) return;
+            
+            showLoading();
+            const reader = new FileReader();
+            
+            reader.onload = async ev => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    
+                    if (data.settings) {
+                        tokoSettings = data.settings;
+                        localStorage.setItem('toko_settings', JSON.stringify(tokoSettings));
+                    }
+                    if (data.history) {
+                        for (const n of data.history) await saveToDB(n);
+                    }
+                    if (data.logo) {
+                        logoData = data.logo;
+                        localStorage.setItem('toko_logo', logoData);
+                    }
+                    if (data.footers) {
+                        footers = data.footers;
+                        localStorage.setItem('footers_settings', JSON.stringify(footers));
+                    }
+                    if (data.sk) {
+                        skText = data.sk;
+                        localStorage.setItem('sk_text', skText);
+                    }
+                    
+                    hideLoading();
+                    showToast('✅ Restore berhasil! Reload...');
+                    setTimeout(() => location.reload(), 1500);
+                } catch (err) {
+                    hideLoading();
+                    showToast('❌ File tidak valid: ' + err.message);
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function clearAllData() {
+            if (!confirm('⚠️ Hapus SEMUA data? Tidak bisa dikembalikan!')) return;
+            
+            indexedDB.deleteDatabase('NotaServiceDB');
+            localStorage.clear();
+            showToast('Semua data dihapus');
+            setTimeout(() => location.reload(), 1000);
+        }
+
+        // ==================== INITIALIZATION ====================
+        
+        async function init() {
+            detectPlatform();
+            
+            try {
+                await initDB();
+            } catch (err) {
+                console.error('DB init failed:', err);
+            }
+            
+            // Load settings
+            const saved = localStorage.getItem('toko_settings');
+            if (saved) {
+                tokoSettings = JSON.parse(saved);
+                document.getElementById('tokoNameDisplay').textContent = tokoSettings.nama || 'Nota Service HP';
+                document.getElementById('tokoSloganDisplay').textContent = tokoSettings.slogan || '';
+                if (tokoSettings.primaryColor) {
+                    document.documentElement.style.setProperty('--primary', tokoSettings.primaryColor);
+                    document.getElementById('themeColorMeta').content = tokoSettings.primaryColor;
+                }
+            }
+            
+            // Load logo
+            logoData = localStorage.getItem('toko_logo');
+            if (logoData) {
+                document.getElementById('headerIcon').innerHTML = `<img src="${logoData}" style="width:100%;height:100%;object-fit:contain;">`;
+            }
+            
+            // Load dark mode
+            if (localStorage.getItem('dark_mode') === 'true') {
+                document.body.classList.add('dark-mode');
+            }
+            
+            // Load other settings
+            const f = localStorage.getItem('footers_settings');
+            if (f) Object.assign(footers, JSON.parse(f));
+            
+            skText = localStorage.getItem('sk_text') || '';
+            autoWASelesai = localStorage.getItem('auto_wa_selesai') === 'true';
+            autoWAAmbil = localStorage.getItem('auto_wa_ambil') === 'true';
+            waNotifTemplate = localStorage.getItem('wa_notif_template') || '';
+            
+            // Setup event listeners
+            document.querySelectorAll('.kondisi-checkbox').forEach(el => {
+                el.addEventListener('click', () => el.classList.toggle('active'));
+            });
+            
+            // Online/offline detection
+            window.addEventListener('online', () => {
+                document.getElementById('connectionStatus').classList.remove('offline');
+            });
+            window.addEventListener('offline', () => {
+                document.getElementById('connectionStatus').classList.add('offline');
+            });
+            if (!navigator.onLine) {
+                document.getElementById('connectionStatus').classList.add('offline');
+            }
+            
+            // Load history
+            await loadHistory();
+            
+            console.log('App initialized. Native:', isNative);
+        }
+
+        // Public API
+        return {
+            init,
+            selectType,
+            selectAmbilStatus,
+            buatPreview,
+            lanjutKe,
+            kirimWA,
+            printBluetooth,
+            generatePDF,
+            previewThermal,
+            closeThermalPreview,
+            handleFotoDevice,
+            importContact,
+            saveContact,
+            showContactPicker,
+            filterContacts,
+            selectContact,
+            closeContactPicker,
+            cleanPhoneInput,
+            validatePhone,
+            hitungSisa,
+            resetForm,
+            buatNotaBaru,
+            backToForm,
+            showHistory,
+            showSettings,
+            saveSettings,
+            handleLogo,
+            removeLogo,
+            toggleDarkMode,
+            renderHistory,
+            loadHistoryItem,
+            exportCSV,
+            exportJSON: exportJSON,
+            backupData: exportJSON,
+            restoreData,
+            clearAllData
+        };
+    })();
+
+    // Start app
+    document.addEventListener('DOMContentLoaded', app.init);
+
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('service-worker.js')
+            .then(() => console.log('SW registered'))
+            .catch(err => console.log('SW failed:', err));
+    }
+    </script>
+</body>
+</html>
