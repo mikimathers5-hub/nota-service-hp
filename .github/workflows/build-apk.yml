@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       build_type:
-        description: 'Build type'
+        description: 'Pilih tipe build (debug/release)'
         required: true
         default: 'debug'
         type: choice
@@ -21,17 +21,13 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      # ==========================================
       # 1. CHECKOUT REPOSITORY
-      # ==========================================
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      # ==========================================
       # 2. CACHE NODE MODULES
-      # ==========================================
       - name: Cache Node Modules
         uses: actions/cache@v4
         with:
@@ -40,9 +36,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      # ==========================================
-      # 3. CACHE GRADLE (Mempercepat Build Android)
-      # ==========================================
+      # 3. CACHE GRADLE
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -53,35 +47,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # ==========================================
-      # 4. SETUP NODE.JS
-      # ==========================================
+      # 4. SETUP ENVIRONMENT (NODE & JAVA)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # ==========================================
-      # 5. INSTALL DEPENDENCIES
-      # ==========================================
-      - name: Clean npm cache
-        run: npm cache clean --force
-
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
-
-      # ==========================================
-      # 6. SETUP JAVA (JDK 17)
-      # ==========================================
       - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # ==========================================
-      # 7. SETUP ANDROID SDK
-      # ==========================================
+      # 5. INSTALL DEPENDENCIES
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      # 6. SETUP ANDROID SDK
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
@@ -89,77 +71,39 @@ jobs:
         run: |
           sdkmanager "platforms;android-34"
           sdkmanager "build-tools;34.0.0"
-          sdkmanager "platform-tools"
-          sdkmanager "cmdline-tools;latest"
 
-      # ==========================================
-      # 8. PREPARE WEB ASSETS (www)
-      # ==========================================
+      # 7. PREPARE WEB ASSETS
       - name: Prepare www directory
+        run: npm run build
+
+      # 8. ADD ANDROID PLATFORM
+      - name: Clean and Add Android Platform
         run: |
-          mkdir -p www
-          
-          # Copy index.html
-          if [ -f "index.html" ]; then
-            cp index.html www/
-            echo "✓ Copied index.html"
-          elif [ -f "www/index.html" ]; then
-            echo "✓ index.html already in www"
-          else
-            echo "❌ ERROR: index.html not found!"
-            ls -la
-            exit 1
-          fi
-          
-          # Copy manifest.json
-          if [ -f "manifest.json" ]; then
-            cp manifest.json www/
-          else
-            echo '{"name":"Nota Service HP","short_name":"NotaService","start_url":".","display":"standalone","background_color":"#667eea","theme_color":"#667eea"}' > www/manifest.json
-          fi
-          
-          # Copy service-worker.js
-          cp service-worker.js www/ 2>/dev/null || echo '// Service Worker Placeholder' > www/service-worker.js
-          
-          touch www/icon.png
-          touch www/icon-512.png
-          ls -la www/
+          rm -rf android
+          npx cap add android
 
-      # ==========================================
-      # 9. ADD ANDROID PLATFORM
-      # ==========================================
-      - name: Clean old Android folder
-        run: rm -rf android
-
-      - name: Add Android Platform
-        run: npx cap add android
-
-      # ==========================================
-      # 10. UPDATE ANDROID MANIFEST (FULL PERMISSIONS)
-      # ==========================================
-      - name: Update AndroidManifest.xml with permissions
+      # 9. UPDATE ANDROID MANIFEST (SYNCED PACKAGE & PERMISSIONS)
+      # Langkah ini sangat krusial untuk fitur KONTAK
+      - name: Update AndroidManifest.xml
         run: |
           cat > android/app/src/main/AndroidManifest.xml << 'MANIFEST_EOF'
           <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.notaservice.hp">
 
               <uses-permission android:name="android.permission.READ_CONTACTS" />
               <uses-permission android:name="android.permission.WRITE_CONTACTS" />
               <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+              
               <uses-permission android:name="android.permission.CAMERA" />
-              <uses-feature android:name="android.hardware.camera" android:required="false" />
-              <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+              <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.BLUETOOTH" />
               <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
               <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
               <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
               <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
               <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-              <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-              <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
               <application
                   android:allowBackup="true"
@@ -196,63 +140,27 @@ jobs:
               </application>
           </manifest>
           MANIFEST_EOF
-          echo "✓ AndroidManifest.xml updated"
+          echo "✓ AndroidManifest.xml has been synced with com.notaservice.hp"
 
-      # ==========================================
-      # 11. COPY CAPACITOR CONFIG & SYNC
-      # ==========================================
+      # 10. SYNC CAPACITOR
       - name: Sync Capacitor
-        run: |
-          cp capacitor.config.json android/ 2>/dev/null || true
-          npx cap sync android
+        run: npx cap sync android
 
-      # ==========================================
-      # 12. BUILD APK
-      # ==========================================
-      - name: Build Debug APK
-        if: github.event.inputs.build_type != 'release'
+      # 11. BUILD APK
+      - name: Build APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --info
+          if [ "${{ github.event.inputs.build_type }}" == "release" ]; then
+            ./gradlew assembleRelease
+          else
+            ./gradlew assembleDebug
+          fi
 
-      - name: Build Release APK
-        if: github.event.inputs.build_type == 'release'
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleRelease --stacktrace --info
-
-      # ==========================================
-      # 13. VERIFY & UPLOAD ARTIFACT
-      # ==========================================
-      - name: Verify APK exists
-        run: |
-          BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
-          find android/app/build/outputs -name "*.apk" -type f
-
+      # 12. UPLOAD ARTIFACT
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: NotaService-${{ github.event.inputs.build_type || 'Debug' }}-v${{ github.run_number }}
+          name: NotaService-${{ github.event.inputs.build_type || 'debug' }}
           path: android/app/build/outputs/apk/**/*.apk
-          retention-days: 30
-
-      # ==========================================
-      # 14. CREATE GITHUB RELEASE (ON TAG)
-      # ==========================================
-      - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: android/app/build/outputs/apk/**/*.apk
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # ==========================================
-      # 15. BUILD SUMMARY
-      # ==========================================
-      - name: Build Summary
-        run: |
-          echo "Build Completed: ${{ github.event.inputs.build_type || 'debug' }}"
+          retention-days: 7
