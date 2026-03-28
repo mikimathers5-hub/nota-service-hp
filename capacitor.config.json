@@ -1,7 +1,7 @@
 {
-  "appId": "com.example.notaservice",
+  "appId": "com.notaservice.hp",
   "appName": "Nota Service HP",
-  "webDir": ".",
+  "webDir": "www",
   "bundledWebRuntime": false,
   "server": {
     "androidScheme": "https",
@@ -10,16 +10,34 @@
   "android": {
     "allowMixedContent": true,
     "captureInput": true,
-    "webContentsDebuggingEnabled": true
+    "webContentsDebuggingEnabled": false,
+    "backgroundColor": "#667eea",
+    "buildOptions": {
+      "keystorePath": null,
+      "keystoreAlias": null,
+      "keystorePassword": null,
+      "keystoreKeyPassword": null
+    }
   },
   "plugins": {
     "Camera": {
       "android": {
-        "quality": 80,
+        "quality": 85,
         "allowEditing": false,
         "resultType": "DataUrl",
         "saveToGallery": true,
-        "correctOrientation": true
+        "correctOrientation": true,
+        "presentationStyle": "fullscreen",
+        "width": 1280,
+        "height": 1280
+      }
+    },
+    "Contacts": {
+      "android": {
+        "permissions": [
+          "android.permission.READ_CONTACTS",
+          "android.permission.WRITE_CONTACTS"
+        ]
       }
     },
     "BluetoothLe": {
@@ -37,33 +55,41 @@
         ]
       }
     },
-    "Contacts": {
-      "android": {
-        "permissions": [
-          "android.permission.READ_CONTACTS",
-          "android.permission.WRITE_CONTACTS"
-        ]
-      }
-    },
     "Filesystem": {
       "android": {
         "permissions": [
           "android.permission.READ_EXTERNAL_STORAGE",
-          "android.permission.WRITE_EXTERNAL_STORAGE"
+          "android.permission.WRITE_EXTERNAL_STORAGE",
+          "android.permission.READ_MEDIA_IMAGES"
         ]
       }
     },
     "Share": {
       "enabled": true,
       "android": {
-        "filename": "nota-share"
+        "filename": "nota-share",
+        "chooserTitle": "Bagikan Nota"
       }
+    },
+    "App": {
+      "enabled": true
     },
     "AppLauncher": {
       "enabled": true
     },
     "Preferences": {
       "enabled": true
+    },
+    "StatusBar": {
+      "enabled": true
+    },
+    "SplashScreen": {
+      "enabled": true,
+      "android": {
+        "backgroundColor": "#667eea",
+        "splashFullScreen": true,
+        "splashImmersive": true
+      }
     }
   }
 }
