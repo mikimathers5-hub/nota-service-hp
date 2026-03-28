@@ -9,10 +9,19 @@
   "android": {
     "allowMixedContent": true,
     "captureInput": true,
-    "webContentsDebuggingEnabled": false,
+    "webContentsDebuggingEnabled": true,
     "backgroundColor": "#667eea"
   },
   "plugins": {
+    "Contacts": {
+      "android": {
+        "permissions": [
+          "android.permission.READ_CONTACTS",
+          "android.permission.WRITE_CONTACTS",
+          "android.permission.GET_ACCOUNTS"
+        ]
+      }
+    },
     "Camera": {
       "android": {
         "quality": 85,
@@ -20,14 +29,6 @@
         "resultType": "DataUrl",
         "saveToGallery": true,
         "correctOrientation": true
-      }
-    },
-    "Contacts": {
-      "android": {
-        "permissions": [
-          "android.permission.READ_CONTACTS",
-          "android.permission.WRITE_CONTACTS"
-        ]
       }
     },
     "BluetoothLe": {
