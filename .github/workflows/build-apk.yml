@@ -26,12 +26,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      # Delete lock file if exists (force fresh install)
-      - name: Remove lock file
-        run: rm -f package-lock.json npm-shrinkwrap.json
-
-      # Fresh install
       - name: Install dependencies
         run: npm install
 
@@ -48,29 +44,68 @@ jobs:
         run: |
           sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
 
+      # Prepare www
       - name: Prepare www directory
         run: |
           mkdir -p www
-          # Verify files exist
-          test -f index.html || (echo "ERROR: index.html not found" && exit 1)
-          cp index.html www/ 2>/dev/null || true
-          cp manifest.json www/ 2>/dev/null || echo '{}' > www/manifest.json
-          cp service-worker.js www/ 2>/dev/null || true
-          touch www/icon.png www/icon-512.png
+          # Copy files dengan pengecekan
+          if [ -f "index.html" ]; then
+            cp index.html www/
+          else
+            echo "ERROR: index.html not found in root"
+            ls -la
+            exit 1
+          fi
+          
+          cp manifest.json www/ 2>/dev/null || echo '{"name":"Nota Service HP","short_name":"NotaService","start_url":".","display":"standalone"}' > www/manifest.json
+          cp service-worker.js www/ 2>/dev/null || echo '// Service Worker' > www/service-worker.js
+          
+          # Create placeholder icons
+          touch www/icon.png
+          touch www/icon-512.png
+          
+          echo "=== www directory contents ==="
           ls -la www/
 
-      - name: Capacitor Sync
+      # Hapus folder android lama jika ada (clean build)
+      - name: Clean Android folder
+        run: rm -rf android
+
+      # Add Android platform
+      - name: Add Android Platform
+        run: npx cap add android
+
+      # Sync Capacitor
+      - name: Sync Capacitor
         run: npx cap sync android
 
+      # Copy config ke android (penting!)
+      - name: Copy Capacitor Config
+        run: |
+          cp capacitor.config.json android/
+          ls -la android/
+
+      # Build APK
       - name: Build APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assemble${{ github.event.inputs.build_type == 'release' && 'Release' || 'Debug' }} --stacktrace
 
+      # Upload hasil
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: NotaService-${{ github.event.inputs.build_type || 'debug' }}-v${{ github.run_number }}
           path: android/app/build/outputs/apk/${{ github.event.inputs.build_type || 'debug' }}/*.apk
           retention-days: 30
+
+      # Optional: Create Release untuk tag
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: android/app/build/outputs/apk/**/*.apk
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
