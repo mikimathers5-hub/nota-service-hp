@@ -1,0 +1,115 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Setup Java JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: Install dependencies
+      run: |
+        npm ci
+        
+    - name: Prepare www folder
+      run: |
+        mkdir -p www
+        cp index.html www/
+        cp manifest.json www/
+        cp service-worker.js www/
+        if [ -f icon.png ]; then cp icon.png www/; fi
+        if [ -f icon-512.png ]; then cp icon-512.png www/; fi
+        
+    - name: Add Android platform
+      run: npx cap add android
+        
+    - name: Update AndroidManifest.xml
+      run: |
+        MANIFEST="android/app/src/main/AndroidManifest.xml"
+        
+        # Hapus permission duplikat jika ada
+        sed -i '/<uses-permission android:name="android.permission.READ_CONTACTS"/d' $MANIFEST
+        sed -i '/<uses-permission android:name="android.permission.WRITE_CONTACTS"/d' $MANIFEST
+        sed -i '/<uses-permission android:name="android.permission.BLUETOOTH"/d' $MANIFEST
+        sed -i '/<uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/d' $MANIFEST
+        sed -i '/<uses-permission android:name="android.permission.BLUETOOTH_SCAN"/d' $MANIFEST
+        sed -i '/<uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/d' $MANIFEST
+        sed -i '/<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/d' $MANIFEST
+        sed -i '/<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/d' $MANIFEST
+        sed -i '/<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/d' $MANIFEST
+        sed -i '/<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/d' $MANIFEST
+        sed -i '/<uses-permission android:name="android.permission.CAMERA"/d' $MANIFEST
+        sed -i '/<uses-feature android:name="android.hardware.camera"/d' $MANIFEST
+        
+        # Tambahkan permissions sebelum application tag
+        sed -i '/<application/i \
+    <!-- Permissions untuk Kontak -->\
+    <uses-permission android:name="android.permission.READ_CONTACTS" />\
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />\
+    <!-- Permissions untuk Bluetooth Printer -->\
+    <uses-permission android:name="android.permission.BLUETOOTH" />\
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />\
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\
+    <!-- Permissions untuk FileSystem/Share -->\
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\
+    <uses-permission android:name="android.permission.INTERNET" />\
+    <!-- Permissions untuk Camera -->\
+    <uses-permission android:name="android.permission.CAMERA" />\
+    <uses-feature android:name="android.hardware.camera" android:required="false" />\
+' $MANIFEST
+        
+        echo "✅ AndroidManifest.xml updated"
+        
+    - name: Sync Capacitor
+      run: npx cap sync
+      
+    - name: Build Debug APK
+      working-directory: ./android
+      run: |
+        chmod +x gradlew
+        ./gradlew assembleDebug --stacktrace
+        
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 30
+        
+    - name: Build Release APK
+      working-directory: ./android
+      run: ./gradlew assembleRelease --stacktrace
+      
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release-unsigned
+        path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+        retention-days: 30
