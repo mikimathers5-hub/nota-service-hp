@@ -49,46 +49,57 @@ jobs:
       run: |
         MANIFEST="android/app/src/main/AndroidManifest.xml"
         
+        # Backup original
+        cp "$MANIFEST" "$MANIFEST.backup"
+        
         # Hapus permission duplikat jika ada
-        sed -i '/<uses-permission android:name="android.permission.READ_CONTACTS"/d' "$MANIFEST"
-        sed -i '/<uses-permission android:name="android.permission.WRITE_CONTACTS"/d' "$MANIFEST"
-        sed -i '/<uses-permission android:name="android.permission.BLUETOOTH"/d' "$MANIFEST"
-        sed -i '/<uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/d' "$MANIFEST"
-        sed -i '/<uses-permission android:name="android.permission.BLUETOOTH_SCAN"/d' "$MANIFEST"
-        sed -i '/<uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/d' "$MANIFEST"
-        sed -i '/<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/d' "$MANIFEST"
-        sed -i '/<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/d' "$MANIFEST"
-        sed -i '/<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/d' "$MANIFEST"
-        sed -i '/<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/d' "$MANIFEST"
-        sed -i '/<uses-permission android:name="android.permission.CAMERA"/d' "$MANIFEST"
-        sed -i '/<uses-feature android:name="android.hardware.camera"/d' "$MANIFEST"
+        sed -i '/READ_CONTACTS/d' "$MANIFEST"
+        sed -i '/WRITE_CONTACTS/d' "$MANIFEST"
+        sed -i '/BLUETOOTH/d' "$MANIFEST"
+        sed -i '/ACCESS_FINE_LOCATION/d' "$MANIFEST"
+        sed -i '/ACCESS_COARSE_LOCATION/d' "$MANIFEST"
+        sed -i '/READ_EXTERNAL_STORAGE/d' "$MANIFEST"
+        sed -i '/WRITE_EXTERNAL_STORAGE/d' "$MANIFEST"
+        sed -i '/CAMERA/d' "$MANIFEST"
+        sed -i '/hardware.camera/d' "$MANIFEST"
         
-        # Buat file permissions baru
-        cat > /tmp/permissions.txt << 'PERMEOF'
-        <!-- Permissions untuk Kontak -->
-        <uses-permission android:name="android.permission.READ_CONTACTS" />
-        <uses-permission android:name="android.permission.WRITE_CONTACTS" />
-        <!-- Permissions untuk Bluetooth Printer -->
-        <uses-permission android:name="android.permission.BLUETOOTH" />
-        <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-        <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-        <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-        <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-        <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-        <!-- Permissions untuk FileSystem/Share -->
-        <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-        <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-        <uses-permission android:name="android.permission.INTERNET" />
-        <!-- Permissions untuk Camera -->
-        <uses-permission android:name="android.permission.CAMERA" />
-        <uses-feature android:name="android.hardware.camera" android:required="false" />
-PERMEOF
-        
-        # Insert permissions sebelum <application
-        sed -i "/<application/r /tmp/permissions.txt" "$MANIFEST"
+        # Insert permissions sebelum <application menggunakan Python
+        python3 << 'PYEOF'
+import re
+
+manifest_path = "android/app/src/main/AndroidManifest.xml"
+permissions = '''    <!-- Permissions untuk Kontak -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+    <!-- Permissions untuk Bluetooth Printer -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Permissions untuk FileSystem/Share -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Permissions untuk Camera -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+'''
+
+with open(manifest_path, 'r') as f:
+    content = f.read()
+
+# Insert sebelum <application
+content = content.replace('<application', permissions + '\n    <application')
+
+with open(manifest_path, 'w') as f:
+    f.write(content)
+
+print("AndroidManifest.xml updated successfully")
+PYEOF
         
         echo "✅ AndroidManifest.xml updated"
-        cat "$MANIFEST"
         
     - name: Sync Capacitor
       run: npx cap sync
